@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getAccount, STATUS_LABELS } from "@/lib/account";
+import { daysLeft, getAccount, STATUS_LABELS } from "@/lib/account";
 import { accountsEnabled, config, formatPrice } from "@/lib/config";
 import { getPreapproval, saveSubscription } from "@/lib/mercadopago";
 
@@ -32,9 +32,13 @@ export default async function CuentaPage({
   }
 
   const pct = Math.min(100, Math.round((account.used / Math.max(1, account.limit)) * 100));
+  const trialDays = daysLeft(account.trialEndsAt);
+  const trialEnded = !account.active && !!account.trialEndsAt;
   const statusLabel = account.isAdmin
     ? "Administrador"
-    : account.manual
+    : account.onTrial
+      ? `Prueba gratis · ${trialDays} ${trialDays === 1 ? "día" : "días"}`
+      : account.manual
       ? "Activa (activada a mano)"
       : (STATUS_LABELS[account.status] ?? account.status);
 
@@ -68,7 +72,7 @@ export default async function CuentaPage({
             <div className="label">Plan</div>
             <div className="mt-1 text-lg font-bold">{config.planName}</div>
             <div className="text-sm text-[var(--muted)]">
-              {formatPrice()} por mes · {config.aiMonthlyLimit} instrucciones a la IA por mes
+              {formatPrice()} por mes · {config.aiMonthlyLimit} créditos de IA por mes
             </div>
           </div>
           <span
@@ -82,7 +86,7 @@ export default async function CuentaPage({
           <div className="mt-5 space-y-4">
             <div>
               <div className="flex justify-between text-sm">
-                <span>IA usada este mes</span>
+                <span>{account.onTrial ? "Créditos de IA de la prueba" : "Créditos de IA usados este mes"}</span>
                 <span className="tabular-nums">
                   {account.used} / {account.limit}
                 </span>
@@ -92,7 +96,21 @@ export default async function CuentaPage({
               </div>
               <p className="mt-1 text-xs text-[var(--muted)]">El contador vuelve a cero el día 1 de cada mes.</p>
             </div>
-            {account.nextPaymentDate && !account.manual && (
+            {account.onTrial && (
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-4 text-sm">
+                <p>
+                  Estás en tu <b>prueba gratis</b>: te {trialDays === 1 ? "queda 1 día" : `quedan ${trialDays} días`} (hasta el{" "}
+                  {new Date(account.trialEndsAt!).toLocaleDateString("es-AR", { day: "numeric", month: "long" })}). Suscríbete
+                  cuando quieras para seguir usando Impulsa Studio sin cortes.
+                </p>
+                <form action="/api/mp/subscribe" method="post" className="mt-3">
+                  <button className="btn btn-primary w-full justify-center">
+                    Suscribirme con Mercado Pago · {formatPrice()}/mes
+                  </button>
+                </form>
+              </div>
+            )}
+            {account.nextPaymentDate && !account.manual && !account.onTrial && (
               <p className="text-sm text-[var(--muted)]">
                 Próximo cobro: {new Date(account.nextPaymentDate).toLocaleDateString("es-AR")}. Puedes cancelar cuando
                 quieras desde tu cuenta de Mercado Pago (Suscripciones).
@@ -104,6 +122,11 @@ export default async function CuentaPage({
           </div>
         ) : (
           <div className="mt-5 space-y-3">
+            {trialEnded && (
+              <p className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                Tu prueba gratis terminó. ¡Esperamos que te haya gustado! Suscríbete para seguir editando.
+              </p>
+            )}
             <p className="text-sm">
               Suscríbete para usar el editor con IA: subtítulos automáticos, cortes, fotos, música, efectos y el
               asistente que edita por ti.

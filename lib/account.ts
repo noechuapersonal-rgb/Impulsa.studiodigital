@@ -8,6 +8,9 @@ export interface Account {
   email: string;
   isAdmin: boolean;
   active: boolean;
+  /** true while the free trial is the only thing giving access */
+  onTrial: boolean;
+  trialEndsAt: string | null;
   status: string;
   manual: boolean;
   nextPaymentDate: string | null;
@@ -38,17 +41,33 @@ export async function getAccount(): Promise<Account | null> {
   const isAdmin = isAdminEmail(email);
   const status = sub?.status ?? "inactive";
   const manual = !!sub?.manual;
+  const paid = isAdmin || manual || status === "authorized";
+  const trialEnd = trialEndsAt(user);
+  const onTrial = !paid && !!trialEnd && trialEnd.getTime() > Date.now();
   return {
     user,
     email,
     isAdmin,
     status,
     manual,
-    active: isAdmin || manual || status === "authorized",
+    active: paid || onTrial,
+    onTrial,
+    trialEndsAt: trialEnd?.toISOString() ?? null,
     nextPaymentDate: sub?.next_payment_date ?? null,
     used: usage?.count ?? 0,
-    limit: config.aiMonthlyLimit,
+    limit: onTrial ? config.trialAiLimit : config.aiMonthlyLimit,
   };
+}
+
+/** End of the free trial, counted from sign-up. Null when trials are disabled (TRIAL_DAYS=0). */
+export function trialEndsAt(user: { created_at?: string }): Date | null {
+  if (!config.trialDays || !user.created_at) return null;
+  return new Date(new Date(user.created_at).getTime() + config.trialDays * 86_400_000);
+}
+
+export function daysLeft(iso: string | null): number {
+  if (!iso) return 0;
+  return Math.max(0, Math.ceil((new Date(iso).getTime() - Date.now()) / 86_400_000));
 }
 
 /** Counts one AI instruction for the user this month. Returns the new total. */

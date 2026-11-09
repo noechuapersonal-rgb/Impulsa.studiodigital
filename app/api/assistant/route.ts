@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getAccount, incrementUsage } from "@/lib/account";
 import { AI_TOOLS, SYSTEM_PROMPT } from "@/lib/aiTools";
-import { accountsEnabled } from "@/lib/config";
+import { accountsEnabled, config } from "@/lib/config";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     const account = await getAccount();
     if (!account) return Response.json({ error: "Tu sesión expiró. Vuelve a ingresar." }, { status: 401 });
     if (!account.active)
-      return Response.json({ error: "Necesitas una suscripción activa para usar el asistente IA." }, { status: 402 });
+      return Response.json({ error: "Tu prueba gratis terminó. Suscríbete desde \"Mi cuenta\" para seguir usando el asistente IA." }, { status: 402 });
     const last = messages[messages.length - 1];
     const isNewInstruction =
       last?.role === "user" &&
@@ -50,7 +50,11 @@ export async function POST(req: Request) {
     if (isNewInstruction) {
       if (account.used >= account.limit && !account.isAdmin)
         return Response.json(
-          { error: `Llegaste al límite de ${account.limit} instrucciones a la IA de este mes. Se renueva el día 1. Mientras tanto puedes seguir editando a mano.` },
+          {
+            error: account.onTrial
+              ? `Usaste los ${account.limit} créditos de IA de la prueba gratis. Suscríbete desde "Mi cuenta" para tener ${config.aiMonthlyLimit} por mes. Mientras tanto puedes seguir editando a mano.`
+              : `Llegaste al límite de ${account.limit} créditos de IA de este mes. Se renueva el día 1. Mientras tanto puedes seguir editando a mano.`,
+          },
           { status: 429 },
         );
       usage.used = await incrementUsage(account.user.id);

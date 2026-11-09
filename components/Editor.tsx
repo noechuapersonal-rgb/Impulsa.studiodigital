@@ -17,6 +17,8 @@ export interface EditorAccount {
   email: string;
   used: number;
   limit: number;
+  /** days left of the free trial, or null when the user pays */
+  trialDaysLeft?: number | null;
 }
 
 export default function Editor({ account }: { account?: EditorAccount }) {
@@ -112,6 +114,11 @@ export default function Editor({ account }: { account?: EditorAccount }) {
           ✨ <span className="hidden md:inline">Asistente IA</span>
         </button>
         <ExportButton disabled={!hasAssets} />
+        {account?.trialDaysLeft != null && (
+          <Link href="/cuenta" className="btn !border-amber-500/40 text-amber-200" title="Ver planes">
+            🎁 Prueba: {account.trialDaysLeft} {account.trialDaysLeft === 1 ? "día" : "días"}
+          </Link>
+        )}
         {account && (
           <Link href="/cuenta" className="btn" title={account.email}>
             👤 <span className="hidden xl:inline">Mi cuenta</span>

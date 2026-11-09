@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
-import { currentPeriod, getAccount, isAdminEmail, STATUS_LABELS } from "@/lib/account";
+import { currentPeriod, getAccount, isAdminEmail, STATUS_LABELS, trialEndsAt } from "@/lib/account";
 import { accountsEnabled, config, formatPrice } from "@/lib/config";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
@@ -74,7 +74,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
               <th className="p-3">Mail</th>
               <th className="p-3">Alta</th>
               <th className="p-3">Suscripción</th>
-              <th className="p-3 text-right">IA este mes</th>
+              <th className="p-3 text-right">Créditos IA este mes</th>
               <th className="p-3">Acceso manual</th>
             </tr>
           </thead>
@@ -89,9 +89,19 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                   <td className="p-3 whitespace-nowrap text-[var(--muted)]">
                     {u.created_at ? new Date(u.created_at).toLocaleDateString("es-AR") : "—"}
                   </td>
-                  <td className="p-3">{STATUS_LABELS[s?.status ?? "inactive"] ?? s?.status}</td>
+                  <td className="p-3">
+                    {(() => {
+                      const st = s?.status ?? "inactive";
+                      if (st !== "authorized" && !isManual) {
+                        const end = trialEndsAt(u);
+                        if (end && end.getTime() > Date.now())
+                          return `Prueba gratis (hasta ${end.toLocaleDateString("es-AR")})`;
+                      }
+                      return STATUS_LABELS[st] ?? st;
+                    })()}
+                  </td>
                   <td className={`p-3 text-right tabular-nums ${used >= config.aiMonthlyLimit ? "text-amber-300" : ""}`}>
-                    {used} / {config.aiMonthlyLimit}
+                    {used}
                   </td>
                   <td className="p-3">
                     <form action={setManual}>

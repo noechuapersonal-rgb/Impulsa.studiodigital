@@ -42,12 +42,12 @@ export default function Home() {
           lenguaje natural. Listo para Reels, TikTok, Shorts y YouTube.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/login?next=/cuenta" className="btn btn-primary px-6 py-3 text-base">
-            Empezar ahora
+          <Link href="/login?next=/editor" className="btn btn-primary px-6 py-3 text-base">
+            Probar gratis {config.trialDays} días
           </Link>
         </div>
         <p className="mt-4 text-xs text-[var(--muted)]">
-          Tus videos se procesan en tu navegador: no se suben a ningún servidor.
+          Sin tarjeta para empezar. Tus videos se procesan en tu navegador: no se suben a ningún servidor.
         </p>
       </section>
 
@@ -86,13 +86,14 @@ export default function Home() {
           <ul className="mt-5 space-y-2 text-left text-sm">
             <li>✓ Editor completo: cortes, textos, fotos, música, sonidos y efectos</li>
             <li>✓ Subtítulos automáticos ilimitados</li>
-            <li>✓ {config.aiMonthlyLimit} instrucciones al asistente IA por mes</li>
+            <li>✓ {config.aiMonthlyLimit} créditos de IA por mes (1 crédito = 1 pedido al asistente)</li>
             <li>✓ Exporta en vertical, cuadrado u horizontal</li>
             <li>✓ Cancela cuando quieras desde Mercado Pago</li>
           </ul>
-          <Link href="/login?next=/cuenta" className="btn btn-primary mt-6 w-full justify-center py-3 text-base">
-            Suscribirme
+          <Link href="/login?next=/editor" className="btn btn-primary mt-6 w-full justify-center py-3 text-base">
+            Empezar prueba gratis de {config.trialDays} días
           </Link>
+          <p className="mt-2 text-xs text-[var(--muted)]">Después, {formatPrice()}/mes. Cancelas cuando quieras.</p>
         </div>
       </section>
 

@@ -9,6 +9,8 @@ export const config = {
   planPrice: Number(process.env.PLAN_PRICE || 25000),
   planCurrency: process.env.PLAN_CURRENCY || "ARS",
   aiMonthlyLimit: Number(process.env.AI_MONTHLY_LIMIT || 200),
+  trialDays: Number(process.env.TRIAL_DAYS ?? 3),
+  trialAiLimit: Number(process.env.TRIAL_AI_LIMIT || 20),
   adminEmails: (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())

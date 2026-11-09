@@ -1,7 +1,7 @@
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import Editor from "@/components/Editor";
-import { getAccount } from "@/lib/account";
+import { daysLeft, getAccount } from "@/lib/account";
 import { accountsEnabled } from "@/lib/config";
 
 export const metadata = { title: "Editor — Impulsa Studio" };
@@ -12,5 +12,14 @@ export default async function EditorPage() {
   const account = await getAccount();
   if (!account) redirect("/login?next=/editor");
   if (!account.active) redirect("/cuenta");
-  return <Editor account={{ email: account.email, used: account.used, limit: account.limit }} />;
+  return (
+    <Editor
+      account={{
+        email: account.email,
+        used: account.used,
+        limit: account.limit,
+        trialDaysLeft: account.onTrial ? daysLeft(account.trialEndsAt) : null,
+      }}
+    />
+  );
 }

@@ -59,6 +59,8 @@ En tu proyecto de Vercel: **Settings → Environment Variables**. Agrega cada un
 | `PLAN_PRICE` | Precio mensual, solo el número (ej. `25000`) |
 | `PLAN_CURRENCY` | `ARS` (u otra moneda de tu cuenta de Mercado Pago) |
 | `AI_MONTHLY_LIMIT` | Instrucciones a la IA por cliente por mes (ej. `200`) |
+| `TRIAL_DAYS` | Días de prueba gratis desde que se registran (por defecto `3`; `0` = sin prueba) |
+| `TRIAL_AI_LIMIT` | Créditos de IA durante la prueba (por defecto `20`) |
 | `ADMIN_EMAILS` | Tu mail (para entrar al panel `/admin`). Varios, separados por coma |
 | `NEXT_PUBLIC_SITE_URL` | La dirección de tu web (ej. `https://impulsa-studiodigital.vercel.app`) |
 
