@@ -15,19 +15,13 @@ y el asistente IA queda desactivado (para que nadie gaste tu saldo de Claude).
    Ponle un nombre (ej. `impulsa`), una contraseña de base de datos (guárdala) y la región **South America (São Paulo)**.
 2. Cuando termine de crearse, ve a **SQL Editor → New query**, pega todo el contenido del archivo
    [`supabase/schema.sql`](supabase/schema.sql) y pulsa **Run**. Debe decir "Success".
-3. Ve a **Authentication → Emails → Templates** (Plantillas de correo). En las plantillas **Magic Link** y
-   **Confirm signup**, cambia el asunto a `Tu código para Impulsa Studio` y reemplaza el contenido por:
-
-   ```html
-   <h2>Tu código para Impulsa Studio</h2>
-   <p>Escribe este código para entrar:</p>
-   <p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
-   <p>Vence en 1 hora. Si no lo pediste, ignora este mail.</p>
-   ```
-
-   Guarda cada plantilla.
-4. Ve a **Authentication → URL Configuration** y en **Site URL** pon la dirección de tu web
-   (ej. `https://impulsa-studiodigital.vercel.app`).
+3. **Mail de acceso.** Sin configurar nada, Supabase manda un mail con un **enlace** ("Sign in") y la web ya
+   funciona con ese enlace. Si además quieres que llegue un **código de 6 dígitos**, primero configura un correo
+   propio (paso 5); recién entonces Supabase deja editar **Authentication → Emails → Magic Link** y
+   **Confirm signup**. Agrega al mensaje la línea `<p style="font-size:28px;font-weight:bold">{{ .Token }}</p>`.
+4. Ve a **Authentication → URL Configuration**:
+   - **Site URL:** la dirección de tu web (ej. `https://impulsa-studiodigital.vercel.app`).
+   - **Redirect URLs → Add URL:** `https://impulsa-studiodigital.vercel.app/**` (con tu dirección).
 5. **Importante para vender:** el servidor de correo incluido en Supabase solo envía unos pocos mails por hora.
    Para clientes reales configura un correo propio en **Authentication → Emails → SMTP Settings**.
    Una opción gratuita es [Resend](https://resend.com) (3.000 mails/mes): crea una cuenta, verifica tu dominio y

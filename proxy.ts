@@ -7,6 +7,13 @@ export async function proxy(request: NextRequest) {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return NextResponse.next(); // accounts not configured yet: open mode
 
+  // A sign-in link that landed on the home page (Supabase "Site URL" fallback): finish it in /auth/callback.
+  if (request.nextUrl.pathname === "/" && (request.nextUrl.searchParams.has("code") || request.nextUrl.searchParams.has("token_hash"))) {
+    const cb = request.nextUrl.clone();
+    cb.pathname = "/auth/callback";
+    return NextResponse.redirect(cb);
+  }
+
   let response = NextResponse.next({ request });
   const sb = createServerClient(url, key, {
     cookies: {
@@ -34,5 +41,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/editor/:path*", "/cuenta/:path*", "/admin/:path*", "/login"],
+  matcher: ["/", "/editor/:path*", "/cuenta/:path*", "/admin/:path*", "/login"],
 };

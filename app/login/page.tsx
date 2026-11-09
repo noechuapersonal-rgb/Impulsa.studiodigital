@@ -6,8 +6,8 @@ import LoginForm from "./LoginForm";
 
 export const metadata = { title: "Ingresar — Impulsa Studio" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
-  const { next } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
+  const { next, error } = await searchParams;
   const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/editor";
   if (!accountsEnabled()) redirect(safeNext);
   if (await getAccount()) redirect(safeNext);
@@ -20,7 +20,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           Impulsa <span className="grad-text">Studio</span>
         </Link>
         <div className="panel rounded-2xl p-6">
-          <LoginForm next={safeNext} />
+          <LoginForm next={safeNext} linkError={!!error} />
         </div>
       </div>
     </main>
