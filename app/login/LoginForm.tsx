@@ -28,7 +28,7 @@ export default function LoginForm({ next, linkError }: { next: string; linkError
       setError(
         error.status === 429
           ? "Se pidieron demasiados mails. Espera unos minutos y vuelve a intentarlo."
-          : "No pudimos enviar el mail. Revisa que el mail esté bien escrito.",
+          : `No pudimos enviar el mail. Revisa que el mail esté bien escrito. (Detalle: ${error.message || error.status || "desconocido"})`,
       );
       return;
     }
@@ -46,7 +46,7 @@ export default function LoginForm({ next, linkError }: { next: string; linkError
     });
     if (error) {
       setBusy(false);
-      setError("El código no es correcto o ya venció. Revisa el mail o pide uno nuevo.");
+      setError(`El código no es correcto o ya venció. Revisa el mail o pide uno nuevo. (Detalle: ${error.message})`);
       return;
     }
     window.location.href = next;
