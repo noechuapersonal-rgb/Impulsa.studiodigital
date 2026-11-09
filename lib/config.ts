@@ -6,9 +6,9 @@ export const config = {
   mpAccessToken: process.env.MP_ACCESS_TOKEN ?? "",
   mpWebhookSecret: process.env.MP_WEBHOOK_SECRET ?? "",
   planName: process.env.PLAN_NAME || "Impulsa Studio — Plan mensual",
-  planPrice: Number(process.env.PLAN_PRICE || 15000),
+  planPrice: Number(process.env.PLAN_PRICE || 25000),
   planCurrency: process.env.PLAN_CURRENCY || "ARS",
-  aiMonthlyLimit: Number(process.env.AI_MONTHLY_LIMIT || 300),
+  aiMonthlyLimit: Number(process.env.AI_MONTHLY_LIMIT || 200),
   adminEmails: (process.env.ADMIN_EMAILS ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())

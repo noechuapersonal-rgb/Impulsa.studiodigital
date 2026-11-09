@@ -62,9 +62,9 @@ En tu proyecto de Vercel: **Settings → Environment Variables**. Agrega cada un
 | `SUPABASE_SERVICE_ROLE_KEY` | Paso 1.6 |
 | `MP_ACCESS_TOKEN` | Paso 2.3 |
 | `MP_WEBHOOK_SECRET` | Paso 2.4 |
-| `PLAN_PRICE` | Precio mensual, solo el número (ej. `15000`) |
+| `PLAN_PRICE` | Precio mensual, solo el número (ej. `25000`) |
 | `PLAN_CURRENCY` | `ARS` (u otra moneda de tu cuenta de Mercado Pago) |
-| `AI_MONTHLY_LIMIT` | Instrucciones a la IA por cliente por mes (ej. `300`) |
+| `AI_MONTHLY_LIMIT` | Instrucciones a la IA por cliente por mes (ej. `200`) |
 | `ADMIN_EMAILS` | Tu mail (para entrar al panel `/admin`). Varios, separados por coma |
 | `NEXT_PUBLIC_SITE_URL` | La dirección de tu web (ej. `https://impulsa-studiodigital.vercel.app`) |
 
@@ -83,5 +83,5 @@ Después ve a **Deployments → … → Redeploy** para que tome los cambios.
 
 - **Vercel, Supabase y Resend**: gratis en sus planes iniciales (alcanzan para empezar).
 - **Claude (la IA)**: con el modelo Haiku, cada instrucción cuesta una fracción de centavo de dólar; con el
-  límite de 300 instrucciones por cliente por mes, cada cliente te cuesta como máximo unos pocos centavos.
+  límite de 200 instrucciones por cliente por mes, un cliente que use todo su límite te cuesta como máximo unos 2 dólares al mes (medio centavo a 1 centavo por instrucción).
 - **Mercado Pago**: cobra su comisión habitual por cada pago recibido.
