@@ -45,3 +45,14 @@ as $$
 $$;
 
 revoke execute on function public.increment_ai_usage(uuid, text) from public, anon, authenticated;
+
+-- Kit de marca de cada usuario (logo, colores, tipografía, contacto…)
+create table if not exists public.brand_kits (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.brand_kits enable row level security;
+drop policy if exists "ver mi marca" on public.brand_kits;
+create policy "ver mi marca" on public.brand_kits
+  for select using (auth.uid() = user_id);

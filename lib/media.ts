@@ -130,6 +130,15 @@ const pending = new Map<
 function getWorker() {
   if (!worker) {
     worker = new Worker("/whisper-worker.js", { type: "module" });
+    // the worker could not start (e.g. the speech model library failed to download)
+    worker.onerror = (ev) => {
+      ev.preventDefault?.();
+      const err = new Error("No se pudo cargar el reconocimiento de voz. Revisa tu conexión a internet e inténtalo de nuevo.");
+      pending.forEach((p) => p.reject(err));
+      pending.clear();
+      worker?.terminate();
+      worker = null;
+    };
     worker.onmessage = (e) => {
       const m = e.data;
       const p = pending.get(m.id);

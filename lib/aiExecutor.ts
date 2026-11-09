@@ -1,6 +1,7 @@
 "use client";
 
 import * as A from "./actions";
+import { applyBrand } from "./brand";
 import { store } from "./store";
 
 type Input = Record<string, unknown>;
@@ -78,6 +79,16 @@ export async function executeTool(name: string, input: Input): Promise<string> {
     case "set_video_volume":
       A.setVideoVolume(Number(input.volume ?? 1));
       return "Volumen actualizado.";
+    case "apply_brand": {
+      const brand = store.get().brand;
+      if (!brand?.name && !brand?.logo)
+        return "El cliente todavía no cargó su kit de marca. Pídele que lo complete en la pestaña 🎨 Marca.";
+      await applyBrand(brand, {
+        logo: input.include_logo !== false,
+        logoPosition: (["top-left", "top-right", "bottom-left", "bottom-right"] as const).find((x) => x === input.logo_position),
+      });
+      return `Marca aplicada: tipografía ${brand.font}, color ${brand.primary}${brand.logo && input.include_logo !== false ? ", logo en la esquina" : ""}.`;
+    }
     case "clear":
       A.clearItems(String(input.what));
       return "Eliminado.";

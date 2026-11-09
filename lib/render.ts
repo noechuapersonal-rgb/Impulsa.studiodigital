@@ -9,7 +9,11 @@ const easeOutBack = (x: number) => {
   return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
 };
 
-const FONT = `"Inter Variable", "Inter", "Helvetica Neue", Arial, sans-serif`;
+const DEFAULT_FONT = `"Inter Variable", "Inter", "Helvetica Neue", Arial, sans-serif`;
+// set at the start of every frame from the project (brand font)
+let FONT = DEFAULT_FONT;
+let BRAND_COLOR = "#ff3d71";
+export const fontStack = (family?: string) => (family ? `"${family}", ${DEFAULT_FONT}` : DEFAULT_FONT);
 
 function mediaSize(m: Drawable) {
   return m instanceof HTMLVideoElement
@@ -51,6 +55,8 @@ export function activeEffects(effects: Effect[], t: number) {
 export function drawFrame(ctx: CanvasRenderingContext2D, f: FrameInput) {
   const { project, t, W, H, video } = f;
   const u = Math.min(W, H) / 720;
+  FONT = fontStack(project.font);
+  BRAND_COLOR = project.brandColor || "#ff3d71";
   ctx.save();
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, W, H);
@@ -284,7 +290,7 @@ function drawOverlay(
     ctx.textBaseline = "middle";
     const lines = wrap(ctx, text, W * 0.86);
     const lh = size * 1.15;
-    const color = o.color || (p.box ? "#ff3d71" : "#ffffff");
+    const color = o.color || (p.box ? BRAND_COLOR : "#ffffff");
     lines.forEach((line, i) => {
       const y = (i - (lines.length - 1) / 2) * lh;
       if (p.box) {

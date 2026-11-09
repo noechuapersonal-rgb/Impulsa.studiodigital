@@ -7,15 +7,19 @@ import { SUBTITLE_PRESETS, fmt } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { store, useEditor } from "@/lib/store";
 import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type SfxName, type SubtitlePreset } from "@/lib/types";
+import BrandPanel from "./BrandPanel";
 import Field from "./Field";
+import PublishPanel from "./PublishPanel";
 import Inspector from "./Inspector";
 
 const TABS = [
   { id: "media", icon: "📁", label: "Medios" },
+  { id: "brand", icon: "🎨", label: "Marca" },
   { id: "subs", icon: "🔤", label: "Subtítulos" },
   { id: "text", icon: "T", label: "Texto" },
   { id: "sfx", icon: "🔊", label: "Sonidos" },
   { id: "fx", icon: "✨", label: "Efectos" },
+  { id: "publish", icon: "✍️", label: "Publicar" },
   { id: "props", icon: "⚙", label: "Propiedades" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
@@ -29,7 +33,7 @@ export default function SidePanel() {
 
   return (
     <aside className="flex w-[340px] shrink-0 border-r border-[var(--line)] bg-[var(--panel)]">
-      <nav className="flex w-16 shrink-0 flex-col gap-1 border-r border-[var(--line)] p-1.5">
+      <nav className="scroll-thin flex w-16 shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--line)] p-1.5">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -47,6 +51,8 @@ export default function SidePanel() {
         {tab === "text" && <TextTab />}
         {tab === "sfx" && <SfxTab />}
         {tab === "fx" && <FxTab />}
+        {tab === "brand" && <BrandPanel />}
+        {tab === "publish" && <PublishPanel />}
         {tab === "props" && <Inspector />}
       </div>
     </aside>

@@ -236,6 +236,18 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
     },
   },
   {
+    name: "apply_brand",
+    description:
+      "Aplica el kit de marca del cliente al video: su tipografía y colores en textos y subtítulos, y (si tiene) su logo en una esquina durante todo el video. Úsalo cuando pidan 'pon mi marca', 'mi logo', 'mis colores', o al armar un video para su negocio.",
+    input_schema: {
+      type: "object",
+      properties: {
+        include_logo: { type: "boolean", description: "Poner el logo. Por defecto true." },
+        logo_position: { type: "string", enum: ["top-left", "top-right", "bottom-left", "bottom-right"] },
+      },
+    },
+  },
+  {
     name: "clear",
     description: "Elimina todos los elementos de un tipo.",
     input_schema: {
@@ -260,4 +272,6 @@ Cómo trabajar:
 - Los cortes desplazan todo lo que viene después. Si vas a cortar y además colocar textos/efectos/sonidos, haz los cortes primero, luego pide de nuevo la transcripción si necesitas los tiempos nuevos, y después coloca el resto.
 - Piensa como un editor de contenido para redes: ganchos en los primeros segundos, subtítulos legibles, zoom para enfatizar frases clave, efectos de sonido sutiles en transiciones, música de fondo baja (0.15–0.3) cuando hay voz.
 - No abuses: pocos efectos bien colocados se ven mejor que muchos.
+- Si hay un kit de marca en el estado del proyecto, úsalo: aplica la marca (apply_brand) cuando tenga sentido, usa sus datos reales de contacto, frases y tono en los textos y llamados a la acción. Nunca inventes precios, teléfonos ni promociones.
+- Si piden el texto para publicar (descripción, caption, copy, hashtags), escríbelo directamente en tu respuesta con el tono de la marca: gancho, mensaje, llamado a la acción y hashtags. También pueden usar la pestaña "Publicar".
 - Al terminar, responde en el idioma del usuario con un resumen breve y concreto de lo que hiciste (2–5 viñetas) y, si tiene sentido, una sugerencia de siguiente paso. No uses tablas.`;

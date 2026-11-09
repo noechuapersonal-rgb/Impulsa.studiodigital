@@ -13,6 +13,10 @@ La IA ejecuta las ediciones en un editor visual donde también se puede ajustar 
   Estilos: TikTok, clásico, karaoke, minimal y neón, con palabra activa resaltada. Las líneas se pueden corregir a mano.
 - **Cortes**: eliminación automática de silencios (jump cuts), cortar tramos, quedarse con “los mejores momentos”,
   dividir clips (tecla `S`). Todo lo demás (subtítulos, textos, efectos, audio) se reajusta solo.
+- **Kit de marca**: logo, tipografía (Google Fonts), colores, WhatsApp, Instagram, frases y hashtags. Se aplica al
+  video con un botón o pidiéndoselo a la IA.
+- **Texto para publicar**: la IA escribe la descripción del posteo (gancho, llamado a la acción, hashtags) para
+  Instagram, TikTok, Facebook o estados de WhatsApp, con el tono de la marca.
 - **Fotos y textos** superpuestos con animaciones (fundido, pop, deslizar, máquina de escribir); se arrastran en el visor.
 - **Música de fondo** (bucle, volumen, fundidos) y **10 efectos de sonido** integrados y sintetizados (sin derechos).
 - **Efectos visuales**: zoom, temblor, glitch, flash, fundidos, blanco y negro, sepia, vintage, desenfoque, brillo,

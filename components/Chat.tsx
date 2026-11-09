@@ -23,6 +23,8 @@ const SUGGESTIONS = [
   "Pon zoom y un whoosh en los momentos más importantes",
   "Agrega la música de fondo bajita con fundido al final",
   "Haz un clip de 30 segundos con lo mejor",
+  "Pon mi marca y un cartel con mi WhatsApp al final",
+  "Escribime el texto para publicarlo en Instagram",
 ];
 
 const TOOL_LABELS: Record<string, string> = {
@@ -40,6 +42,7 @@ const TOOL_LABELS: Record<string, string> = {
   add_effect: "Añadiendo efecto visual",
   set_format: "Cambiando formato",
   set_video_volume: "Ajustando volumen",
+  apply_brand: "Aplicando tu marca",
   clear: "Limpiando elementos",
 };
 

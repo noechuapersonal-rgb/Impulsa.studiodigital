@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { deleteSelection, setFormat } from "@/lib/actions";
+import { loadBrand, loadFont } from "@/lib/brand";
 import { getPlayer } from "@/lib/player";
 import { splitClipAt } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
@@ -29,6 +30,14 @@ export default function Editor({ account }: { account?: EditorAccount }) {
   const canRedo = useEditor((s) => s.future.length > 0);
   const hasAssets = useEditor((s) => s.assets.length > 0);
   const [chatOpen, setChatOpen] = useState(true);
+
+  useEffect(() => {
+    loadBrand().then((brand) => {
+      if (!brand) return;
+      store.set({ brand });
+      loadFont(brand.font);
+    });
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

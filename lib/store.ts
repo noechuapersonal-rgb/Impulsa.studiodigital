@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { emptyProject } from "./project";
-import type { Asset, Project, Segment, Selection } from "./types";
+import type { Asset, BrandKit, Project, Segment, Selection } from "./types";
 
 export interface EditorState {
   project: Project;
@@ -12,6 +12,7 @@ export interface EditorState {
   time: number;
   playing: boolean;
   busy: string | null; // long-running task message
+  brand: BrandKit | null;
   past: Project[];
   future: Project[];
 }
@@ -24,6 +25,7 @@ let state: EditorState = {
   time: 0,
   playing: false,
   busy: null,
+  brand: null,
   past: [],
   future: [],
 };

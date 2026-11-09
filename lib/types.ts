@@ -155,6 +155,26 @@ export interface Project {
   cues: Cue[];
   subtitleStyle: SubtitleStyle;
   effects: Effect[];
+  /** font family used for texts and subtitles (brand font) */
+  font?: string;
+  /** default background color for label / call-to-action texts (brand color) */
+  brandColor?: string;
+}
+
+export interface BrandKit {
+  name: string;
+  description: string; // qué vende, a quién, tono
+  tone: string;
+  font: string;
+  primary: string;
+  secondary: string;
+  text: string;
+  logo: string | null; // data URL (PNG), max ~512px
+  whatsapp: string;
+  instagram: string;
+  website: string;
+  phrases: string; // una por línea: "Envíos a todo el país", "3 cuotas sin interés"
+  hashtags: string;
 }
 
 export interface Segment {

@@ -1,5 +1,6 @@
 "use client";
 
+import { describeBrand } from "./brand";
 import { detectSilences, transcribeTimeline } from "./media";
 import { getPlayer } from "./player";
 import {
@@ -362,6 +363,7 @@ export function describeProject(): string {
   const starts = clipStarts(p);
   const name = (id?: string) => s.assets.find((a) => a.id === id)?.name ?? "?";
   const L: string[] = [];
+  L.push(describeBrand(s.brand));
   L.push(`Formato: ${p.aspect} (encuadre: ${p.fit}). Duración total: ${totalDuration(p).toFixed(2)}s. Cabezal en ${s.time.toFixed(2)}s.`);
   L.push("\nMedios subidos:");
   if (!s.assets.length) L.push("  (ninguno)");
