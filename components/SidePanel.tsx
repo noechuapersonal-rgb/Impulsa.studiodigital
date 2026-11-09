@@ -10,11 +10,13 @@ import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type SfxName, type SubtitlePres
 import BrandPanel from "./BrandPanel";
 import Field from "./Field";
 import PublishPanel from "./PublishPanel";
+import ReferencesPanel from "./ReferencesPanel";
 import Inspector from "./Inspector";
 
 const TABS = [
   { id: "media", icon: "📁", label: "Medios" },
   { id: "brand", icon: "🎨", label: "Marca" },
+  { id: "refs", icon: "⭐", label: "Referencias" },
   { id: "subs", icon: "🔤", label: "Subtítulos" },
   { id: "text", icon: "T", label: "Texto" },
   { id: "sfx", icon: "🔊", label: "Sonidos" },
@@ -52,6 +54,7 @@ export default function SidePanel() {
         {tab === "sfx" && <SfxTab />}
         {tab === "fx" && <FxTab />}
         {tab === "brand" && <BrandPanel />}
+        {tab === "refs" && <ReferencesPanel />}
         {tab === "publish" && <PublishPanel />}
         {tab === "props" && <Inspector />}
       </div>

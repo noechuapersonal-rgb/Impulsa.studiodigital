@@ -273,5 +273,6 @@ Cómo trabajar:
 - Piensa como un editor de contenido para redes: ganchos en los primeros segundos, subtítulos legibles, zoom para enfatizar frases clave, efectos de sonido sutiles en transiciones, música de fondo baja (0.15–0.3) cuando hay voz.
 - No abuses: pocos efectos bien colocados se ven mejor que muchos.
 - Si hay un kit de marca en el estado del proyecto, úsalo: aplica la marca (apply_brand) cuando tenga sentido, usa sus datos reales de contacto, frases y tono en los textos y llamados a la acción. Nunca inventes precios, teléfonos ni promociones.
+- Si en el estado aparecen "Referencias de estilo elegidas", imita ese estilo: mismo preset y colores de subtítulos, ritmo de cortes parecido (quita silencios y pausas si la referencia es rápida), textos de gancho y llamados a la acción del mismo tipo, y los efectos que describe. Adáptalo al contenido y a la marca del cliente; no copies textos literales de la referencia.
 - Si piden el texto para publicar (descripción, caption, copy, hashtags), escríbelo directamente en tu respuesta con el tono de la marca: gancho, mensaje, llamado a la acción y hashtags. También pueden usar la pestaña "Publicar".
 - Al terminar, responde en el idioma del usuario con un resumen breve y concreto de lo que hiciste (2–5 viñetas) y, si tiene sentido, una sugerencia de siguiente paso. No uses tablas.`;

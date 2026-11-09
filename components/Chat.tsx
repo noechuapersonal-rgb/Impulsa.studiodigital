@@ -67,6 +67,15 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [items]);
 
+  // other panels (e.g. "Editar con este estilo") can send a message to the assistant
+  const sendRef = useRef<(t: string) => void>(() => undefined);
+  sendRef.current = (t) => void send(t);
+  useEffect(() => {
+    const on = (e: Event) => sendRef.current((e as CustomEvent<string>).detail);
+    window.addEventListener("impulsa-chat", on);
+    return () => window.removeEventListener("impulsa-chat", on);
+  }, []);
+
   const push = (it: UiItem) => setItems((x) => [...x, it]);
 
   async function send(text: string) {

@@ -27,8 +27,10 @@ export default function BrandPanel() {
 
   const save = async () => {
     setBusy(true);
-    const where = await saveBrand(b);
-    store.set({ brand: b });
+    // keep the references list, which is edited in its own tab
+    const merged = { ...b, references: store.get().brand?.references ?? b.references };
+    const where = await saveBrand(merged);
+    store.set({ brand: merged });
     setBusy(false);
     setStatus(where === "cuenta" ? "✓ Guardado en tu cuenta" : "✓ Guardado en este navegador");
   };

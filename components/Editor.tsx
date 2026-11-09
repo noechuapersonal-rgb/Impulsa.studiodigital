@@ -32,6 +32,12 @@ export default function Editor({ account }: { account?: EditorAccount }) {
   const [chatOpen, setChatOpen] = useState(true);
 
   useEffect(() => {
+    const open = () => setChatOpen(true);
+    window.addEventListener("impulsa-chat", open);
+    return () => window.removeEventListener("impulsa-chat", open);
+  }, []);
+
+  useEffect(() => {
     loadBrand().then((brand) => {
       if (!brand) return;
       store.set({ brand });
@@ -141,7 +147,10 @@ export default function Editor({ account }: { account?: EditorAccount }) {
           <Preview />
           <Timeline />
         </main>
-        {chatOpen && <Chat usage={account ? { used: account.used, limit: account.limit } : undefined} />}
+        {/* kept mounted when hidden so other panels can still send it messages */}
+        <div className={chatOpen ? "contents" : "hidden"}>
+          <Chat usage={account ? { used: account.used, limit: account.limit } : undefined} />
+        </div>
       </div>
     </div>
   );

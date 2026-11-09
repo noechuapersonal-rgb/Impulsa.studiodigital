@@ -15,6 +15,8 @@ La IA ejecuta las ediciones en un editor visual donde también se puede ajustar 
   dividir clips (tecla `S`). Todo lo demás (subtítulos, textos, efectos, audio) se reajusta solo.
 - **Kit de marca**: logo, tipografía (Google Fonts), colores, WhatsApp, Instagram, frases y hashtags. Se aplica al
   video con un botón o pidiéndoselo a la IA.
+- **Referencias de estilo**: el cliente sube Reels que le gustan; se miden los cortes en el navegador y la IA
+  describe el estilo a partir de fotogramas. Al elegir una referencia, el asistente imita ese estilo en el video.
 - **Texto para publicar**: la IA escribe la descripción del posteo (gancho, llamado a la acción, hashtags) para
   Instagram, TikTok, Facebook o estados de WhatsApp, con el tono de la marca.
 - **Fotos y textos** superpuestos con animaciones (fundido, pop, deslizar, máquina de escribir); se arrastran en el visor.

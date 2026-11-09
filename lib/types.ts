@@ -175,6 +175,22 @@ export interface BrandKit {
   website: string;
   phrases: string; // una por línea: "Envíos a todo el país", "3 cuotas sin interés"
   hashtags: string;
+  /** Reels the user likes, analyzed by the AI so it can imitate their style */
+  references?: StyleRef[];
+}
+
+export interface StyleRef {
+  id: string;
+  name: string;
+  createdAt: string;
+  thumb: string; // small JPEG data URL
+  duration: number;
+  aspect: string;
+  cuts: number;
+  avgShot: number; // seconds between cuts
+  profile: string; // style description written by the AI
+  notes: string; // what the user likes about it
+  link: string;
 }
 
 export interface Segment {

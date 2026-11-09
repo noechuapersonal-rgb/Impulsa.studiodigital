@@ -13,6 +13,8 @@ export interface EditorState {
   playing: boolean;
   busy: string | null; // long-running task message
   brand: BrandKit | null;
+  /** ids of the style references chosen for the current video */
+  activeRefs: string[];
   past: Project[];
   future: Project[];
 }
@@ -26,6 +28,7 @@ let state: EditorState = {
   playing: false,
   busy: null,
   brand: null,
+  activeRefs: [],
   past: [],
   future: [],
 };
