@@ -6,7 +6,7 @@ La IA ejecuta las ediciones en un editor visual donde también se puede ajustar 
 
 ## Funciones
 
-- **Asistente IA (Claude)**: entiende instrucciones en lenguaje natural y edita el proyecto llamando a herramientas
+- **Asistente IA (Claude Haiku, muy económico; se puede cambiar con la variable `CLAUDE_MODEL`)**: entiende instrucciones en lenguaje natural y edita el proyecto llamando a herramientas
   (cortes, subtítulos, textos, fotos, música, sonidos, efectos, formato). Ve el estado del proyecto, las fotos subidas,
   un fotograma del video y, cuando lo necesita, la transcripción con marcas de tiempo.
 - **Subtítulos automáticos**: transcripción con Whisper *dentro del navegador* (Transformers.js, WebGPU/WASM).

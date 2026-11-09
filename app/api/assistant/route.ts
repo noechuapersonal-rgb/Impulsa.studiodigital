@@ -4,7 +4,9 @@ import { AI_TOOLS, SYSTEM_PROMPT } from "@/lib/aiTools";
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
-const MODEL = "claude-opus-5-5";
+// Claude Haiku: muy económico (fracciones de centavo por instrucción).
+// Para máxima calidad en pedidos complejos se puede usar "claude-opus-5-5".
+const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-5-5";
 
 let client: Anthropic | null = null;
 
@@ -34,8 +36,6 @@ export async function POST(req: Request) {
     const stream = client.beta.messages.stream({
       model: MODEL,
       max_tokens: 32000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
       output_config: { effort: "medium" },
       system: SYSTEM_PROMPT,
       // eager streaming: inputs are small but arrive sooner; the browser validates them
