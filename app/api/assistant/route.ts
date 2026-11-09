@@ -11,7 +11,10 @@ let client: Anthropic | null = null;
 export async function POST(req: Request) {
   if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
     return Response.json(
-      { error: "Falta configurar ANTHROPIC_API_KEY en el servidor (archivo .env.local)." },
+      {
+        error:
+          "El asistente IA aún no tiene su clave de Claude. Añade la variable ANTHROPIC_API_KEY (en Vercel: Settings → Environment Variables) y vuelve a implementar. Mientras tanto puedes editar con las herramientas del panel izquierdo.",
+      },
       { status: 500 },
     );
   }
