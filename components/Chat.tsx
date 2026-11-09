@@ -75,6 +75,10 @@ export default function Chat() {
     const undoMark = store.get().past.length;
 
     try {
+      if (process.env.NEXT_PUBLIC_DEMO === "1")
+        throw new Error(
+          "En esta vista previa el asistente IA no está conectado. Cuando la web esté instalada con tu clave de Claude, aquí la IA hará los cambios por ti. Mientras tanto, prueba las herramientas del panel izquierdo.",
+        );
       // project state + any new images the AI hasn't seen yet + a frame of the current video
       const content: Anthropic.Beta.BetaContentBlockParam[] = [
         { type: "text", text: `<estado_del_proyecto>\n${describeProject()}\n</estado_del_proyecto>` },

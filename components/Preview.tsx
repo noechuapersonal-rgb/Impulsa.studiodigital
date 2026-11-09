@@ -125,6 +125,17 @@ export default function Preview() {
             />
           </label>
         )}
+        {empty && process.env.NEXT_PUBLIC_DEMO === "1" && (
+          <button
+            className="btn absolute bottom-10 z-10"
+            onClick={async () => {
+              const blob = await (await fetch("sample.webm")).blob();
+              addFiles([new File([blob], "video-de-ejemplo.webm", { type: "video/webm" })]);
+            }}
+          >
+            ▶ Probar con un video de ejemplo
+          </button>
+        )}
       </div>
       <div className="flex h-12 shrink-0 items-center gap-3 border-t border-[var(--line)] px-4">
         <button className="btn" onClick={() => getPlayer()?.seek(0)} title="Inicio">
