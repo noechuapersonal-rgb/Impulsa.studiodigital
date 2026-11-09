@@ -1,0 +1,130 @@
+import { connection } from "next/server";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getAccount, STATUS_LABELS } from "@/lib/account";
+import { accountsEnabled, config, formatPrice } from "@/lib/config";
+import { getPreapproval, saveSubscription } from "@/lib/mercadopago";
+
+export const metadata = { title: "Mi cuenta — Impulsa Studio" };
+
+export default async function CuentaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preapproval_id?: string; error?: string }>;
+}) {
+  await connection();
+  if (!accountsEnabled()) redirect("/editor");
+  const params = await searchParams;
+  let account = await getAccount();
+  if (!account) redirect("/login?next=/cuenta");
+
+  // Back from Mercado Pago checkout: sync the subscription right away (the webhook also does it).
+  if (params.preapproval_id) {
+    try {
+      const pre = await getPreapproval(params.preapproval_id);
+      if (pre.external_reference === account.user.id) {
+        await saveSubscription(pre, account.email);
+        account = (await getAccount())!;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  const pct = Math.min(100, Math.round((account.used / Math.max(1, account.limit)) * 100));
+  const statusLabel = account.isAdmin
+    ? "Administrador"
+    : account.manual
+      ? "Activa (activada a mano)"
+      : (STATUS_LABELS[account.status] ?? account.status);
+
+  return (
+    <main className="mx-auto min-h-screen max-w-2xl px-4 py-8">
+      <header className="mb-8 flex items-center justify-between gap-3">
+        <Link href="/" className="flex items-center gap-2 font-extrabold">
+          <span className="grad grid h-7 w-7 place-items-center rounded-lg text-sm text-white">▶</span>
+          Impulsa <span className="grad-text">Studio</span>
+        </Link>
+        <form action="/api/auth/signout" method="post">
+          <button className="btn">Cerrar sesión</button>
+        </form>
+      </header>
+
+      <h1 className="text-2xl font-bold">Mi cuenta</h1>
+      <p className="mt-1 text-sm text-[var(--muted)]">{account.email}</p>
+
+      {params.error && (
+        <p className="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">{params.error}</p>
+      )}
+      {params.preapproval_id && account.status === "pending" && (
+        <p className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] px-4 py-3 text-sm">
+          Mercado Pago todavía está procesando tu pago. Recarga esta página en unos minutos.
+        </p>
+      )}
+
+      <section className="panel mt-6 rounded-2xl p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="label">Plan</div>
+            <div className="mt-1 text-lg font-bold">{config.planName}</div>
+            <div className="text-sm text-[var(--muted)]">
+              {formatPrice()} por mes · {config.aiMonthlyLimit} instrucciones a la IA por mes
+            </div>
+          </div>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-bold ${account.active ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}`}
+          >
+            {statusLabel}
+          </span>
+        </div>
+
+        {account.active ? (
+          <div className="mt-5 space-y-4">
+            <div>
+              <div className="flex justify-between text-sm">
+                <span>IA usada este mes</span>
+                <span className="tabular-nums">
+                  {account.used} / {account.limit}
+                </span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--panel-2)]">
+                <div className="grad h-full" style={{ width: `${pct}%` }} />
+              </div>
+              <p className="mt-1 text-xs text-[var(--muted)]">El contador vuelve a cero el día 1 de cada mes.</p>
+            </div>
+            {account.nextPaymentDate && !account.manual && (
+              <p className="text-sm text-[var(--muted)]">
+                Próximo cobro: {new Date(account.nextPaymentDate).toLocaleDateString("es-AR")}. Puedes cancelar cuando
+                quieras desde tu cuenta de Mercado Pago (Suscripciones).
+              </p>
+            )}
+            <Link href="/editor" className="btn btn-primary w-full justify-center !py-2.5">
+              Abrir el editor
+            </Link>
+          </div>
+        ) : (
+          <div className="mt-5 space-y-3">
+            <p className="text-sm">
+              Suscríbete para usar el editor con IA: subtítulos automáticos, cortes, fotos, música, efectos y el
+              asistente que edita por ti.
+            </p>
+            <form action="/api/mp/subscribe" method="post">
+              <button className="btn btn-primary w-full justify-center !py-2.5">
+                Suscribirme con Mercado Pago · {formatPrice()}/mes
+              </button>
+            </form>
+            <p className="text-xs text-[var(--muted)]">
+              El pago es mensual y automático. Puedes cancelarlo cuando quieras desde Mercado Pago.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {account.isAdmin && (
+        <Link href="/admin" className="btn mt-4 w-full justify-center">
+          Panel de administración
+        </Link>
+      )}
+    </main>
+  );
+}

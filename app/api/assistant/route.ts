@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { getAccount, incrementUsage } from "@/lib/account";
 import { AI_TOOLS, SYSTEM_PROMPT } from "@/lib/aiTools";
+import { accountsEnabled } from "@/lib/config";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -31,6 +33,35 @@ export async function POST(req: Request) {
     return Response.json({ error: "Conversación inválida" }, { status: 400 });
   }
 
+  // Only subscribers may use the AI, with a monthly limit. Each new instruction from the user counts once
+  // (follow-up requests that only carry tool results are part of the same instruction).
+  let usage: { used: number; limit: number } | undefined;
+  if (accountsEnabled()) {
+    const account = await getAccount();
+    if (!account) return Response.json({ error: "Tu sesión expiró. Vuelve a ingresar." }, { status: 401 });
+    if (!account.active)
+      return Response.json({ error: "Necesitas una suscripción activa para usar el asistente IA." }, { status: 402 });
+    const last = messages[messages.length - 1];
+    const isNewInstruction =
+      last?.role === "user" &&
+      Array.isArray(last.content) &&
+      last.content.some((b) => b.type === "text");
+    usage = { used: account.used, limit: account.limit };
+    if (isNewInstruction) {
+      if (account.used >= account.limit && !account.isAdmin)
+        return Response.json(
+          { error: `Llegaste al límite de ${account.limit} instrucciones a la IA de este mes. Se renueva el día 1. Mientras tanto puedes seguir editando a mano.` },
+          { status: 429 },
+        );
+      usage.used = await incrementUsage(account.user.id);
+    }
+  } else if (process.env.NODE_ENV === "production" && process.env.ALLOW_OPEN_AI !== "1") {
+    return Response.json(
+      { error: "El asistente IA se activa cuando configures las cuentas de usuario (Supabase). Mira CONFIGURACION.md." },
+      { status: 503 },
+    );
+  }
+
   client ??= new Anthropic();
   try {
     const stream = client.beta.messages.stream({
@@ -52,7 +83,7 @@ export async function POST(req: Request) {
         refused: true,
       });
     }
-    return Response.json({ content: msg.content, stop_reason: msg.stop_reason });
+    return Response.json({ content: msg.content, stop_reason: msg.stop_reason, usage });
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {
       return Response.json({ error: "La clave de la API de Claude no es válida." }, { status: 500 });

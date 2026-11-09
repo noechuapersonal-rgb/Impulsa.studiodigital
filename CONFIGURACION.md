@@ -1,0 +1,87 @@
+# Configurar Impulsa Studio para vender
+
+Sigue estos pasos en orden. Necesitas tres cuentas gratuitas: **Supabase** (usuarios y datos),
+**Mercado Pago** (cobros) y **Vercel** (donde está publicada la web). Al final, todo se pega como
+variables en Vercel.
+
+Mientras no completes la parte de Supabase, la web funciona en "modo abierto": cualquiera abre el editor
+y el asistente IA queda desactivado (para que nadie gaste tu saldo de Claude).
+
+---
+
+## 1. Supabase — cuentas con código al mail
+
+1. Entra en <https://supabase.com>, crea una cuenta y pulsa **New project**.
+   Ponle un nombre (ej. `impulsa`), una contraseña de base de datos (guárdala) y la región **South America (São Paulo)**.
+2. Cuando termine de crearse, ve a **SQL Editor → New query**, pega todo el contenido del archivo
+   [`supabase/schema.sql`](supabase/schema.sql) y pulsa **Run**. Debe decir "Success".
+3. Ve a **Authentication → Emails → Templates** (Plantillas de correo). En las plantillas **Magic Link** y
+   **Confirm signup**, cambia el asunto a `Tu código para Impulsa Studio` y reemplaza el contenido por:
+
+   ```html
+   <h2>Tu código para Impulsa Studio</h2>
+   <p>Escribe este código para entrar:</p>
+   <p style="font-size:28px;font-weight:bold;letter-spacing:6px">{{ .Token }}</p>
+   <p>Vence en 1 hora. Si no lo pediste, ignora este mail.</p>
+   ```
+
+   Guarda cada plantilla.
+4. Ve a **Authentication → URL Configuration** y en **Site URL** pon la dirección de tu web
+   (ej. `https://impulsa-studiodigital.vercel.app`).
+5. **Importante para vender:** el servidor de correo incluido en Supabase solo envía unos pocos mails por hora.
+   Para clientes reales configura un correo propio en **Authentication → Emails → SMTP Settings**.
+   Una opción gratuita es [Resend](https://resend.com) (3.000 mails/mes): crea una cuenta, verifica tu dominio y
+   copia sus datos SMTP en Supabase.
+6. Ve a **Project Settings → API Keys** (o **API**) y copia:
+   - **Project URL** → variable `NEXT_PUBLIC_SUPABASE_URL`
+   - **anon / publishable key** → variable `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - **service_role / secret key** → variable `SUPABASE_SERVICE_ROLE_KEY` (¡no la compartas con nadie!)
+
+## 2. Mercado Pago — suscripción mensual
+
+1. Entra en <https://www.mercadopago.com.ar/developers> con tu cuenta de Mercado Pago (la que recibirá el dinero).
+2. **Tus integraciones → Crear aplicación**. Nombre: `Impulsa Studio`. Producto: **Suscripciones**.
+3. En la aplicación, ve a **Credenciales de producción** y copia el **Access Token** → variable `MP_ACCESS_TOKEN`.
+   (Puede que te pida completar datos de tu negocio para activar las credenciales de producción.)
+4. Ve a **Webhooks → Configurar notificaciones**:
+   - **URL de producción:** `https://TU-WEB/api/mp/webhook` (ej. `https://impulsa-studiodigital.vercel.app/api/mp/webhook`)
+   - **Eventos:** marca **Planes y suscripciones**.
+   - Guarda y copia la **clave secreta** → variable `MP_WEBHOOK_SECRET`.
+
+Para probar sin cobrar dinero real, Mercado Pago ofrece **credenciales y usuarios de prueba** en la misma sección.
+
+## 3. Vercel — pegar las variables
+
+En tu proyecto de Vercel: **Settings → Environment Variables**. Agrega cada una (Key = nombre, Value = valor):
+
+| Variable | Qué poner |
+|---|---|
+| `ANTHROPIC_API_KEY` | Tu clave de Claude (`sk-ant-…`) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Paso 1.6 |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Paso 1.6 |
+| `SUPABASE_SERVICE_ROLE_KEY` | Paso 1.6 |
+| `MP_ACCESS_TOKEN` | Paso 2.3 |
+| `MP_WEBHOOK_SECRET` | Paso 2.4 |
+| `PLAN_PRICE` | Precio mensual, solo el número (ej. `15000`) |
+| `PLAN_CURRENCY` | `ARS` (u otra moneda de tu cuenta de Mercado Pago) |
+| `AI_MONTHLY_LIMIT` | Instrucciones a la IA por cliente por mes (ej. `300`) |
+| `ADMIN_EMAILS` | Tu mail (para entrar al panel `/admin`). Varios, separados por coma |
+| `NEXT_PUBLIC_SITE_URL` | La dirección de tu web (ej. `https://impulsa-studiodigital.vercel.app`) |
+
+Después ve a **Deployments → … → Redeploy** para que tome los cambios.
+
+## 4. Probar
+
+1. Abre tu web y pulsa **Ingresar**. Pon tu mail (el de `ADMIN_EMAILS`), recibe el código y entra.
+2. Como administrador tienes acceso completo y verás **Panel de administración** en **Mi cuenta** (`/cuenta`).
+3. En `/admin` ves todos los usuarios, quién paga, cuánto usó la IA este mes, y puedes **dar acceso a mano**
+   a alguien que te pagó por transferencia o a quien quieras regalarle acceso.
+4. Prueba una suscripción con otro mail (ideal con usuarios de prueba de Mercado Pago): al pagar, la cuenta se
+   activa sola y, si el cliente cancela o deja de pagar, se desactiva sola.
+
+## Cuánto cuesta mantenerla
+
+- **Vercel, Supabase y Resend**: gratis en sus planes iniciales (alcanzan para empezar).
+- **Claude (la IA)**: con el modelo Haiku, cada instrucción cuesta una fracción de centavo de dólar; con el
+  límite de 300 instrucciones por cliente por mes, cada cliente te cuesta como máximo unos pocos centavos.
+- **Mercado Pago**: cobra su comisión habitual por cada pago recibido.

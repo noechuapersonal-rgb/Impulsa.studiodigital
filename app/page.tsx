@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { config, formatPrice } from "@/lib/config";
 
 const FEATURES = [
   { icon: "💬", title: "Edita hablando", text: "Escribe lo que quieres — “pon subtítulos estilo TikTok y quita los silencios” — y la IA lo hace." },
@@ -17,9 +18,14 @@ export default function Home() {
           <span className="grad grid h-8 w-8 place-items-center rounded-lg text-white">▶</span>
           Impulsa <span className="grad-text">Studio</span>
         </div>
-        <Link href="/editor" className="btn btn-primary">
-          Abrir editor
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/login" className="btn">
+            Ingresar
+          </Link>
+          <Link href="#precio" className="btn btn-primary">
+            Ver precio
+          </Link>
+        </div>
       </header>
 
       <section className="mx-auto max-w-4xl px-4 pt-16 pb-12 text-center">
@@ -36,8 +42,8 @@ export default function Home() {
           lenguaje natural. Listo para Reels, TikTok, Shorts y YouTube.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Link href="/editor" className="btn btn-primary px-6 py-3 text-base">
-            Empezar a editar — es gratis
+          <Link href="/login?next=/cuenta" className="btn btn-primary px-6 py-3 text-base">
+            Empezar ahora
           </Link>
         </div>
         <p className="mt-4 text-xs text-[var(--muted)]">
@@ -68,6 +74,26 @@ export default function Home() {
             <p className="mt-1 text-sm text-[var(--muted)]">{f.text}</p>
           </div>
         ))}
+      </section>
+
+      <section id="precio" className="mx-auto max-w-md px-4 pb-24">
+        <div className="panel rounded-2xl p-6 text-center">
+          <div className="label">Plan mensual</div>
+          <div className="mt-2 text-4xl font-black">
+            {formatPrice()}
+            <span className="text-base font-semibold text-[var(--muted)]"> / mes</span>
+          </div>
+          <ul className="mt-5 space-y-2 text-left text-sm">
+            <li>✓ Editor completo: cortes, textos, fotos, música, sonidos y efectos</li>
+            <li>✓ Subtítulos automáticos ilimitados</li>
+            <li>✓ {config.aiMonthlyLimit} instrucciones al asistente IA por mes</li>
+            <li>✓ Exporta en vertical, cuadrado u horizontal</li>
+            <li>✓ Cancela cuando quieras desde Mercado Pago</li>
+          </ul>
+          <Link href="/login?next=/cuenta" className="btn btn-primary mt-6 w-full justify-center py-3 text-base">
+            Suscribirme
+          </Link>
+        </div>
       </section>
 
       <footer className="border-t border-[var(--line)] py-6 text-center text-xs text-[var(--muted)]">

@@ -45,7 +45,8 @@ const TOOL_LABELS: Record<string, string> = {
 
 const MAX_STEPS = 12;
 
-export default function Chat() {
+export default function Chat({ usage: initialUsage }: { usage?: { used: number; limit: number } }) {
+  const [usage, setUsage] = useState(initialUsage);
   const [items, setItems] = useState<UiItem[]>([
     {
       role: "assistant",
@@ -109,6 +110,7 @@ export default function Chat() {
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+        if (data.usage) setUsage(data.usage);
         const blocks: Block[] = data.content;
         history.current.push({ role: "assistant", content: blocks as Anthropic.Beta.BetaContentBlockParam[] });
 
@@ -150,6 +152,11 @@ export default function Chat() {
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-[var(--line)] px-4">
         <span className="grad grid h-6 w-6 place-items-center rounded-md text-xs text-white">✨</span>
         <span className="font-bold">Asistente IA</span>
+        {usage && (
+          <span className="ml-auto text-[11px] text-[var(--muted)] tabular-nums" title="Instrucciones a la IA usadas este mes">
+            {usage.used}/{usage.limit} este mes
+          </span>
+        )}
       </div>
       <div className="scroll-thin min-h-0 flex-1 space-y-2.5 overflow-y-auto p-3">
         {items.map((m, i) => (

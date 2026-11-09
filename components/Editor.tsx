@@ -13,7 +13,13 @@ import Preview from "./Preview";
 import SidePanel from "./SidePanel";
 import Timeline from "./Timeline";
 
-export default function Editor() {
+export interface EditorAccount {
+  email: string;
+  used: number;
+  limit: number;
+}
+
+export default function Editor({ account }: { account?: EditorAccount }) {
   const busy = useEditor((s) => s.busy);
   const aspect = useEditor((s) => s.project.aspect);
   const fit = useEditor((s) => s.project.fit);
@@ -106,6 +112,11 @@ export default function Editor() {
           ✨ <span className="hidden md:inline">Asistente IA</span>
         </button>
         <ExportButton disabled={!hasAssets} />
+        {account && (
+          <Link href="/cuenta" className="btn" title={account.email}>
+            👤 <span className="hidden xl:inline">Mi cuenta</span>
+          </Link>
+        )}
       </header>
 
       <div className="flex min-h-0 flex-1">
@@ -114,7 +125,7 @@ export default function Editor() {
           <Preview />
           <Timeline />
         </main>
-        {chatOpen && <Chat />}
+        {chatOpen && <Chat usage={account ? { used: account.used, limit: account.limit } : undefined} />}
       </div>
     </div>
   );

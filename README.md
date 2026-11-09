@@ -23,11 +23,21 @@ La IA ejecuta las ediciones en un editor visual donde también se puede ajustar 
 Los archivos del usuario **no se suben a ningún servidor**: el render, el análisis de audio y la transcripción ocurren
 en el navegador. Al servidor solo llega el texto de la conversación con la IA, el resumen del proyecto y miniaturas.
 
+## Cuentas y suscripciones
+
+- Ingreso con **código al mail** (sin contraseñas), usando Supabase Auth.
+- **Suscripción mensual con Mercado Pago**: al pagar, la cuenta se activa sola (webhook); si cancela, se desactiva.
+- **Límite mensual de instrucciones a la IA** por cliente (`AI_MONTHLY_LIMIT`), para que ningún cliente te cueste
+  más de lo que paga.
+- **Panel `/admin`**: usuarios, suscripciones, uso de la IA y acceso manual (pagos por transferencia, regalos).
+
+👉 Guía paso a paso para dejarlo listo para vender: [CONFIGURACION.md](CONFIGURACION.md)
+
 ## Puesta en marcha
 
 ```bash
 npm install
-cp .env.example .env.local   # y pon tu ANTHROPIC_API_KEY
+cp .env.example .env.local   # completa las variables (ver CONFIGURACION.md)
 npm run dev                  # http://localhost:3000
 ```
 
