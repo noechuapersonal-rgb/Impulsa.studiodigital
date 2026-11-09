@@ -1,8 +1,8 @@
 /** Server-side configuration read from environment variables (see .env.example). */
 export const config = {
-  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
-  supabaseKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
-  supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+  supabaseUrl: (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").trim().replace(/\/+$/, ""),
+  supabaseKey: (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim(),
+  supabaseServiceKey: (process.env.SUPABASE_SERVICE_ROLE_KEY ?? "").trim(),
   mpAccessToken: process.env.MP_ACCESS_TOKEN ?? "",
   mpWebhookSecret: process.env.MP_WEBHOOK_SECRET ?? "",
   planName: process.env.PLAN_NAME || "Impulsa Studio — Plan mensual",

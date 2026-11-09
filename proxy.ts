@@ -3,8 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /** Keeps the Supabase session fresh and sends signed-out visitors to /login. */
 export async function proxy(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim().replace(/\/+$/, "");
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
   if (!url || !key) return NextResponse.next(); // accounts not configured yet: open mode
 
   // A sign-in link that landed on the home page (Supabase "Site URL" fallback): finish it in /auth/callback.
