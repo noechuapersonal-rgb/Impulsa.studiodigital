@@ -147,6 +147,8 @@ export function addImage(o: {
   start?: number;
   end?: number;
   position?: string;
+  x?: number;
+  y?: number;
   size?: number;
   animation?: string;
 }) {
@@ -155,7 +157,9 @@ export function addImage(o: {
   const t = store.get().time;
   const start = num(o.start, t);
   const end = num(o.end, start + 3);
-  const { x, y } = positionToXY(o.position ?? "center");
+  const pos = positionToXY(o.position ?? "center");
+  const x = typeof o.x === "number" ? Math.min(1, Math.max(0, o.x)) : pos.x;
+  const y = typeof o.y === "number" ? Math.min(1, Math.max(0, o.y)) : pos.y;
   const id = uid();
   store.edit((p) => ({
     ...p,
@@ -188,11 +192,15 @@ export function addText(o: {
   color?: string;
   animation?: string;
   size?: number;
+  x?: number;
+  y?: number;
 }) {
   const t = store.get().time;
   const start = num(o.start, t);
   const end = num(o.end, start + 3);
-  const { x, y } = positionToXY(o.position ?? "center");
+  const pos = positionToXY(o.position ?? "center");
+  const x = typeof o.x === "number" ? Math.min(1, Math.max(0, o.x)) : pos.x;
+  const y = typeof o.y === "number" ? Math.min(1, Math.max(0, o.y)) : pos.y;
   const id = uid();
   store.edit((p) => ({
     ...p,
@@ -349,6 +357,104 @@ export function removeItem(id: string) {
   }));
 }
 
+/** Changes one existing item (text/image, effect, sound/music or subtitle line) by id. */
+export function updateItem(id: string, o: Record<string, unknown>): string {
+  const p = store.get().project;
+  const n = (v: unknown) => (typeof v === "number" && isFinite(v) ? v : undefined);
+  const clamp = (v: number | undefined, a: number, b: number) => (v === undefined ? undefined : Math.min(b, Math.max(a, v)));
+  const times = (x: { start: number; end: number }) => {
+    const start = n(o.start) ?? x.start;
+    const end = n(o.end) ?? (n(o.start) !== undefined ? start + (x.end - x.start) : x.end);
+    return { start: Math.max(0, start), end: Math.max(start + 0.1, end) };
+  };
+  const ov = p.overlays.find((x) => x.id === id);
+  if (ov) {
+    const xy = typeof o.position === "string" ? positionToXY(o.position) : null;
+    store.edit((pr) => ({
+      ...pr,
+      overlays: pr.overlays.map((x) =>
+        x.id !== id
+          ? x
+          : {
+              ...x,
+              ...times(x),
+              text: typeof o.text === "string" ? o.text : x.text,
+              color: typeof o.color === "string" ? o.color : x.color,
+              preset: PRESETS.includes(o.preset as TextPreset) ? (o.preset as TextPreset) : x.preset,
+              animation: anim(o.animation, x.animation),
+              size: clamp(n(o.size), x.kind === "image" ? 0.05 : 0.3, x.kind === "image" ? 1 : 3) ?? x.size,
+              x: clamp(n(o.x), 0, 1) ?? xy?.x ?? x.x,
+              y: clamp(n(o.y), 0, 1) ?? xy?.y ?? x.y,
+            },
+      ),
+    }));
+    return "Elemento actualizado.";
+  }
+  const fx = p.effects.find((x) => x.id === id);
+  if (fx) {
+    store.edit((pr) => ({
+      ...pr,
+      effects: pr.effects.map((x) =>
+        x.id !== id
+          ? x
+          : {
+              ...x,
+              ...times(x),
+              type: (EFFECT_TYPES as readonly string[]).includes(o.effect as string) ? (o.effect as EffectType) : x.type,
+              intensity: clamp(n(o.intensity), 0, 1) ?? x.intensity,
+            },
+      ),
+    }));
+    return "Efecto actualizado.";
+  }
+  const au = p.audio.find((x) => x.id === id);
+  if (au) {
+    store.edit((pr) => ({
+      ...pr,
+      audio: pr.audio.map((x) => {
+        if (x.id !== id) return x;
+        const start = Math.max(0, n(o.start) ?? x.start);
+        const end = n(o.end);
+        return {
+          ...x,
+          start,
+          duration: end !== undefined && x.kind === "music" ? Math.max(0.2, end - start) : x.duration,
+          volume: clamp(n(o.volume), 0, 2) ?? x.volume,
+        };
+      }),
+    }));
+    return "Audio actualizado.";
+  }
+  const cue = p.cues.find((x) => x.id === id);
+  if (cue) {
+    store.edit((pr) => ({
+      ...pr,
+      cues: pr.cues.map((x) => (x.id !== id ? x : { ...x, ...times(x), text: typeof o.text === "string" ? o.text : x.text })),
+    }));
+    return "Subtítulo actualizado.";
+  }
+  throw new Error(`No existe ningún elemento con id ${id}. Revisa los ids en el estado del proyecto.`);
+}
+
+export function deleteItems(ids: string[]): number {
+  const set = new Set(ids);
+  const p = store.get().project;
+  const count =
+    p.overlays.filter((x) => set.has(x.id)).length +
+    p.effects.filter((x) => set.has(x.id)).length +
+    p.audio.filter((x) => set.has(x.id)).length +
+    p.cues.filter((x) => set.has(x.id)).length;
+  if (count)
+    store.edit((pr) => ({
+      ...pr,
+      overlays: pr.overlays.filter((x) => !set.has(x.id)),
+      effects: pr.effects.filter((x) => !set.has(x.id)),
+      audio: pr.audio.filter((x) => !set.has(x.id)),
+      cues: pr.cues.filter((x) => !set.has(x.id)),
+    }));
+  return count;
+}
+
 export function deleteSelection() {
   const sel = store.get().selection;
   if (!sel) return;
@@ -388,18 +494,25 @@ export function describeProject(): string {
   );
   L.push(`\nSubtítulos: ${p.cues.length} líneas, estilo ${p.subtitleStyle.preset} (${p.subtitleStyle.position}, color ${p.subtitleStyle.color}, resaltado ${p.subtitleStyle.highlight}, ${p.subtitleStyle.wordsPerCue} palabras por línea).`);
   if (p.overlays.length) {
-    L.push("Textos e imágenes superpuestos:");
+    L.push("Textos e imágenes superpuestos (posición x,y de 0 a 1 desde arriba a la izquierda):");
     for (const o of p.overlays)
-      L.push(`  - ${o.kind === "text" ? `texto "${o.text}" (${o.preset})` : `imagen "${name(o.assetId)}"`} ${fmt(o.start)}–${fmt(o.end)} [${o.start.toFixed(2)}–${o.end.toFixed(2)}s]`);
+      L.push(
+        `  - [${o.id}] ${o.kind === "text" ? `texto "${o.text}" (${o.preset}${o.color ? `, color ${o.color}` : ""})` : `imagen "${name(o.assetId)}"`} ${o.start.toFixed(2)}–${o.end.toFixed(2)}s, x=${o.x.toFixed(2)} y=${o.y.toFixed(2)}, tamaño ${o.size.toFixed(2)}, animación ${o.animation}`,
+      );
   }
   if (p.audio.length) {
     L.push("Audio añadido:");
     for (const a of p.audio)
-      L.push(`  - ${a.kind === "music" ? "música" : "efecto de sonido"} "${a.name}" en ${a.start.toFixed(2)}s, dura ${a.duration.toFixed(2)}s, volumen ${Math.round(a.volume * 100)}%`);
+      L.push(`  - [${a.id}] ${a.kind === "music" ? "música" : "efecto de sonido"} "${a.name}" en ${a.start.toFixed(2)}s, dura ${a.duration.toFixed(2)}s, volumen ${Math.round(a.volume * 100)}%`);
   }
   if (p.effects.length) {
     L.push("Efectos visuales:");
-    for (const e of p.effects) L.push(`  - ${e.type} ${e.start.toFixed(2)}–${e.end.toFixed(2)}s, intensidad ${e.intensity}`);
+    for (const e of p.effects) L.push(`  - [${e.id}] ${e.type} ${e.start.toFixed(2)}–${e.end.toFixed(2)}s, intensidad ${e.intensity}`);
+  }
+  if (p.cues.length) {
+    L.push(`Líneas de subtítulos (${p.cues.length}):`);
+    for (const c of p.cues.slice(0, 120)) L.push(`  - [${c.id}] ${c.start.toFixed(2)}–${c.end.toFixed(2)}s "${c.text}"`);
+    if (p.cues.length > 120) L.push(`  … y ${p.cues.length - 120} más`);
   }
   return L.join("\n");
 }

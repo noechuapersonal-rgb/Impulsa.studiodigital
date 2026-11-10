@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type Anthropic from "@anthropic-ai/sdk";
 import { describeProject } from "@/lib/actions";
-import { executeTool } from "@/lib/aiExecutor";
+import { executeTool, framesForAI, storyboardTimes } from "@/lib/aiExecutor";
 import { imageThumb } from "@/lib/media";
 import { getPlayer } from "@/lib/player";
 import { store, useEditor } from "@/lib/store";
@@ -43,10 +43,16 @@ const TOOL_LABELS: Record<string, string> = {
   set_format: "Cambiando formato",
   set_video_volume: "Ajustando volumen",
   apply_brand: "Aplicando tu marca",
+  view_frames: "Mirando el video",
+  update_item: "Ajustando un elemento",
+  delete_items: "Quitando elementos",
+  undo: "Deshaciendo cambios",
   clear: "Limpiando elementos",
 };
 
-const MAX_STEPS = 12;
+const MAX_STEPS = 14;
+// request size budget (Vercel accepts ~4.5 MB per request)
+const MAX_BYTES = 3_200_000;
 
 export default function Chat({ usage: initialUsage }: { usage?: { used: number; limit: number } }) {
   const [usage, setUsage] = useState(initialUsage);
@@ -106,15 +112,29 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
           /* ignore unreadable image */
         }
       }
-      const player = getPlayer();
-      if (player && store.get().project.clips.length) {
-        content.push({ type: "text", text: "Fotograma actual del video:" });
-        content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: player.snapshot() } });
+      // storyboard: frames across the whole edited video so the AI knows what it contains
+      if (store.get().project.clips.length) {
+        try {
+          const frames = await framesForAI(storyboardTimes(), 320);
+          content.push({ type: "text", text: "Tira de fotogramas del video editado (segundos de la línea de tiempo):" });
+          content.push(...frames);
+        } catch {
+          /* continue without frames */
+        }
       }
       content.push({ type: "text", text });
+      // keep requests under the hosting limit: when the conversation gets heavy (many images),
+      // start a fresh one. Every instruction carries the full project state, so nothing is lost.
+      if (history.current.length && JSON.stringify(history.current).length + JSON.stringify(content).length > MAX_BYTES) {
+        history.current = [];
+      }
       history.current.push({ role: "user", content });
 
       for (let step = 0; step < MAX_STEPS; step++) {
+        if (JSON.stringify(history.current).length > MAX_BYTES + 600_000) {
+          push({ role: "error", text: "La instrucción se hizo demasiado larga. Pedila de nuevo en partes más chicas." });
+          break;
+        }
         const res = await fetch("/api/assistant", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

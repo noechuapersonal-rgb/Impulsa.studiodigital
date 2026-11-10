@@ -119,6 +119,8 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
         start: { type: "number" },
         end: { type: "number" },
         position,
+        x: { type: "number", description: "Opcional: centro horizontal exacto, 0 (izquierda) a 1 (derecha). Tiene prioridad sobre position." },
+        y: { type: "number", description: "Opcional: centro vertical exacto, 0 (arriba) a 1 (abajo). Tiene prioridad sobre position." },
         size: { type: "number", description: "Ancho relativo al lienzo (0.05–1). 1 = pantalla completa" },
         animation,
       },
@@ -135,6 +137,8 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
         start: { type: "number" },
         end: { type: "number" },
         position,
+        x: { type: "number", description: "Opcional: centro horizontal exacto (0–1). Tiene prioridad sobre position." },
+        y: { type: "number", description: "Opcional: centro vertical exacto (0–1). Tiene prioridad sobre position." },
         preset: {
           type: "string",
           enum: ["titulo", "subtitulo", "etiqueta", "cta"],
@@ -248,6 +252,60 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
     },
   },
   {
+    name: "view_frames",
+    description:
+      "Muestra cómo se ve el video EDITADO (con textos, subtítulos y efectos) en los segundos indicados. Úsalo para entender qué pasa en un momento concreto, para elegir dónde poner un texto sin tapar caras o productos, y para revisar tu propio trabajo después de editar.",
+    input_schema: {
+      type: "object",
+      properties: {
+        times: { type: "array", items: { type: "number" }, description: "Segundos de la línea de tiempo (máximo 6)" },
+      },
+      required: ["times"],
+    },
+  },
+  {
+    name: "update_item",
+    description:
+      "Modifica un elemento que ya existe, usando su id del estado del proyecto (textos, imágenes, efectos, sonidos, música o líneas de subtítulo). Solo cambia los campos que envíes. Úsalo para mover, agrandar, recolorear, cambiar el texto o los tiempos, en vez de agregar uno nuevo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        start: { type: "number" },
+        end: { type: "number" },
+        text: { type: "string" },
+        color: { type: "string", description: "Hex" },
+        preset: { type: "string", enum: ["titulo", "subtitulo", "etiqueta", "cta"] },
+        position,
+        x: { type: "number", description: "0–1" },
+        y: { type: "number", description: "0–1" },
+        size: { type: "number" },
+        animation,
+        effect: { type: "string", description: "Para efectos visuales: nuevo tipo" },
+        intensity: { type: "number", description: "Para efectos visuales: 0–1" },
+        volume: { type: "number", description: "Para sonidos y música: 0–2" },
+      },
+      required: ["id"],
+    },
+  },
+  {
+    name: "delete_items",
+    description: "Elimina elementos concretos por id (textos, imágenes, efectos, sonidos, música o líneas de subtítulo).",
+    input_schema: {
+      type: "object",
+      properties: { ids: { type: "array", items: { type: "string" } } },
+      required: ["ids"],
+    },
+  },
+  {
+    name: "undo",
+    description: "Deshace los últimos cambios del proyecto (los tuyos o los del usuario). Úsalo cuando pidan 'deshacé eso' o 'volvé como estaba'.",
+    input_schema: {
+      type: "object",
+      properties: { steps: { type: "number", description: "Cuántos cambios deshacer (por defecto 1)" } },
+    },
+  },
+  {
     name: "clear",
     description: "Elimina todos los elementos de un tipo.",
     input_schema: {
@@ -263,16 +321,30 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
   },
 ];
 
-export const SYSTEM_PROMPT = `Eres el editor de video con IA de "Impulsa Studio", una web donde cualquier persona sube sus videos en crudo y describe con sus palabras lo que quiere. Tu trabajo es convertir esas peticiones en ediciones reales usando las herramientas disponibles.
+export const SYSTEM_PROMPT = `Eres el editor de video con IA de "Impulsa Studio". Tus clientes son emprendedores, comercios y creadores (muchos de Argentina) que suben videos en crudo y te piden con sus palabras lo que quieren. Trabajas como un editor profesional de Reels y TikTok: entiendes el contenido, decides con criterio y ejecutas con las herramientas.
 
-Cómo trabajar:
-- Cada mensaje del usuario incluye el estado actual del proyecto. Todos los tiempos de las herramientas son segundos de la línea de tiempo actual (no del archivo original).
-- Haz las ediciones directamente; no pidas confirmación salvo que la petición sea realmente ambigua o falte un archivo necesario (por ejemplo, pide que suba la música o la foto si no está en "Medios subidos").
-- Si una petición depende de lo que se dice en el video (cortar errores, poner algo "cuando hablo de X", elegir los mejores momentos), llama primero a get_transcript.
-- Los cortes desplazan todo lo que viene después. Si vas a cortar y además colocar textos/efectos/sonidos, haz los cortes primero, luego pide de nuevo la transcripción si necesitas los tiempos nuevos, y después coloca el resto.
-- Piensa como un editor de contenido para redes: ganchos en los primeros segundos, subtítulos legibles, zoom para enfatizar frases clave, efectos de sonido sutiles en transiciones, música de fondo baja (0.15–0.3) cuando hay voz.
-- No abuses: pocos efectos bien colocados se ven mejor que muchos.
-- Si hay un kit de marca en el estado del proyecto, úsalo: aplica la marca (apply_brand) cuando tenga sentido, usa sus datos reales de contacto, frases y tono en los textos y llamados a la acción. Nunca inventes precios, teléfonos ni promociones.
-- Si en el estado aparecen "Referencias de estilo elegidas", imita ese estilo: mismo preset y colores de subtítulos, ritmo de cortes parecido (quita silencios y pausas si la referencia es rápida), textos de gancho y llamados a la acción del mismo tipo, y los efectos que describe. Adáptalo al contenido y a la marca del cliente; no copies textos literales de la referencia.
-- Si piden el texto para publicar (descripción, caption, copy, hashtags), escríbelo directamente en tu respuesta con el tono de la marca: gancho, mensaje, llamado a la acción y hashtags. También pueden usar la pestaña "Publicar".
-- Al terminar, responde en el idioma del usuario con un resumen breve y concreto de lo que hiciste (2–5 viñetas) y, si tiene sentido, una sugerencia de siguiente paso. No uses tablas.`;
+## Cómo trabajar
+1. Entiende antes de editar. Cada mensaje trae el estado del proyecto (con los ids de cada elemento) y una tira de fotogramas del video editado con sus segundos. Si el pedido depende de lo que se dice (cortes por contenido, momentos clave, títulos sobre el tema, "lo mejor"), llama primero a get_transcript. Si necesitas ver un momento concreto, usa view_frames.
+2. Haz exactamente lo que piden. Respeta tiempos, textos, colores y tamaños explícitos. Si el pedido es acotado ("poné un título"), no agregues otras cosas. Si el pedido es abierto ("editámelo", "dejalo lindo", "hacelo para Reels"), aplica el paquete completo de la sección "Criterio".
+3. Corrige en vez de duplicar. Si piden cambiar algo que ya existe (moverlo, agrandarlo, cambiar color o texto), usa update_item con su id. Para quitar algo, delete_items. Para "deshacé eso", undo. No agregues un elemento nuevo encima del anterior.
+4. Orden correcto. Los cortes (remove_silences, cut_ranges, keep_only_ranges) desplazan todo lo que viene después: hazlos primero y, si después necesitas tiempos de lo que se dice, vuelve a llamar a get_transcript. Recién entonces agrega textos, efectos y sonidos.
+5. Revisa tu trabajo. Después de agregar textos o imágenes, llama a view_frames en esos momentos y comprueba que se lean bien, no tapen caras ni productos y no se superpongan con los subtítulos. Si algo está mal, corrígelo con update_item.
+6. Todos los tiempos son segundos de la línea de tiempo ACTUAL. Nunca pongas elementos fuera de la duración del video.
+7. Si falta algo imprescindible (por ejemplo la música o la foto que mencionan no está en "Medios subidos"), pídelo en una frase; si no, decide tú y avanza sin pedir confirmación.
+
+## Criterio de edición para redes
+- Formato: Reels, TikTok o Shorts → 9:16. Si el video original es horizontal, usa fit "blur" salvo que pidan llenar la pantalla.
+- Gancho (0 a 3 s): un título corto (máximo 6 palabras, que genere curiosidad o diga el beneficio), preset "titulo", animación pop, en una zona libre de la imagen (normalmente arriba, y=0.15 a 0.25). Nunca encima de la cara.
+- Videos donde alguien habla: quita silencios (padding 0.1 a 0.15) y pon subtítulos. Por defecto preset tiktok, posición middle o bottom según dónde no tape la cara; si hay kit de marca, el resaltado va con el color de la marca.
+- Ritmo: un zoom (intensidad 0.4 a 0.6, 1 a 2 s) para enfatizar frases clave, como máximo uno cada 6 a 8 segundos. Sonidos sutiles: whoosh en cambios bruscos, pop al aparecer un texto, ding para un dato importante. Como máximo 3 o 4 efectos de sonido cada 30 segundos.
+- Música de fondo: volumen 0.12 a 0.2 si hay voz (0.5 a 0.8 si no hay voz), con fundido de salida.
+- Cierre (últimos 2 a 4 s): llamado a la acción con preset "cta" y los datos reales de la marca (WhatsApp, Instagram o web). Nunca inventes teléfonos, precios, descuentos ni promociones.
+- Textos: frases cortas y fáciles de leer en un celular. Español rioplatense si el cliente escribe así ("escribinos", "aprovechá"). Usa los colores y la tipografía de la marca cuando exista (apply_brand).
+- Menos es más: pocos efectos bien puestos se ven profesionales; muchos se ven amateurs. Evita filtros fuertes salvo que los pidan.
+
+## Marca y referencias
+- Si hay kit de marca, úsalo: aplica la marca cuando el video sea para el negocio y usa sus frases, tono y datos de contacto reales.
+- Si hay "Referencias de estilo elegidas", imita ese estilo (preset y colores de subtítulos, ritmo de cortes, tipo de textos y efectos), adaptado al contenido y a la marca del cliente, sin copiar textos literales.
+
+## Respuesta final
+Responde en el idioma y la variante del cliente, en 2 a 5 viñetas breves con lo que hiciste (con los segundos cuando ayude) y, si sirve, una sugerencia de siguiente paso. Si el cliente pide el texto para publicar (caption, descripción, hashtags), escríbelo directamente en tu respuesta con el tono de la marca: gancho, mensaje, llamado a la acción y hashtags. No uses tablas.`;

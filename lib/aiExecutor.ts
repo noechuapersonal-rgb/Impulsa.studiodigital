@@ -2,6 +2,8 @@
 
 import * as A from "./actions";
 import { applyBrand } from "./brand";
+import { getPlayer } from "./player";
+import { totalDuration } from "./project";
 import { store } from "./store";
 
 type Input = Record<string, unknown>;
@@ -10,8 +12,33 @@ const ranges = (v: unknown) =>
     .map((r) => ({ start: Number(r?.start), end: Number(r?.end) }))
     .filter((r) => isFinite(r.start) && isFinite(r.end) && r.end > r.start);
 
-/** Runs one AI tool call against the editor and returns a short text result for the model. */
-export async function executeTool(name: string, input: Input): Promise<string> {
+export type ToolOutput =
+  | string
+  | ({ type: "text"; text: string } | { type: "image"; source: { type: "base64"; media_type: "image/jpeg"; data: string } })[];
+
+/** Frames of the edited video at the given times, labeled, ready to show the AI. */
+export async function framesForAI(times: number[], maxSide = 360): Promise<Exclude<ToolOutput, string>> {
+  const player = getPlayer();
+  const dur = totalDuration(store.get().project);
+  if (!player || dur <= 0) return [{ type: "text", text: "No hay video en la línea de tiempo." }];
+  const ts = times.map((t) => Math.min(Math.max(0, t), Math.max(0, dur - 0.05)));
+  const frames = await player.renderFrames(ts, maxSide);
+  return frames.flatMap((f) => [
+    { type: "text" as const, text: `Segundo ${f.t.toFixed(1)}:` },
+    { type: "image" as const, source: { type: "base64" as const, media_type: "image/jpeg" as const, data: f.data } },
+  ]);
+}
+
+/** Evenly spaced frames covering the whole video (the "storyboard" sent with each instruction). */
+export function storyboardTimes(): number[] {
+  const dur = totalDuration(store.get().project);
+  if (dur <= 0) return [];
+  const n = Math.max(3, Math.min(8, Math.round(dur / 5)));
+  return Array.from({ length: n }, (_, i) => (dur * (i + 0.5)) / n);
+}
+
+/** Runs one AI tool call against the editor and returns a result for the model (text, or frames). */
+export async function executeTool(name: string, input: Input): Promise<ToolOutput> {
   switch (name) {
     case "get_transcript": {
       if (!store.get().project.clips.length) return "No hay videos en la línea de tiempo.";
@@ -88,6 +115,27 @@ export async function executeTool(name: string, input: Input): Promise<string> {
         logoPosition: (["top-left", "top-right", "bottom-left", "bottom-right"] as const).find((x) => x === input.logo_position),
       });
       return `Marca aplicada: tipografía ${brand.font}, color ${brand.primary}${brand.logo && input.include_logo !== false ? ", logo en la esquina" : ""}.`;
+    }
+    case "view_frames": {
+      const times = (Array.isArray(input.times) ? input.times : []).map(Number).filter((t) => isFinite(t)).slice(0, 6);
+      if (!times.length) return "Indica al menos un segundo.";
+      return framesForAI(times, 480);
+    }
+    case "update_item":
+      return A.updateItem(String(input.id ?? ""), input);
+    case "delete_items": {
+      const ids = (Array.isArray(input.ids) ? input.ids : []).map(String);
+      const n = A.deleteItems(ids);
+      return n ? `${n} elemento(s) eliminado(s).` : "No encontré esos ids.";
+    }
+    case "undo": {
+      const steps = Math.min(20, Math.max(1, Math.round(Number(input.steps ?? 1)) || 1));
+      let done = 0;
+      for (let i = 0; i < steps && store.get().past.length; i++) {
+        store.undo();
+        done++;
+      }
+      return done ? `Se deshicieron ${done} cambio(s).` : "No hay cambios para deshacer.";
     }
     case "clear":
       A.clearItems(String(input.what));

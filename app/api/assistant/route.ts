@@ -37,7 +37,8 @@ export async function POST(req: Request) {
     const stream = client.beta.messages.stream({
       model: MODEL,
       max_tokens: 32000,
-      output_config: { effort: "medium" },
+      // a bit more thinking gives noticeably better editing judgment at a small extra cost
+      output_config: { effort: "high" },
       system: SYSTEM_PROMPT,
       // eager streaming: inputs are small but arrive sooner; the browser validates them
       tools: AI_TOOLS.map((t) => ({ ...t, eager_input_streaming: true })),
