@@ -15,6 +15,8 @@ export interface EditorState {
   brand: BrandKit | null;
   /** ids of the style references chosen for the current video */
   activeRefs: string[];
+  /** when set, the next tap on the video preview picks a color for this field */
+  eyedropper: { id: string; apply: (hex: string) => void } | null;
   past: Project[];
   future: Project[];
 }
@@ -29,6 +31,7 @@ let state: EditorState = {
   busy: null,
   brand: null,
   activeRefs: [],
+  eyedropper: null,
   past: [],
   future: [],
 };

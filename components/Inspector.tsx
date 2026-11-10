@@ -5,6 +5,7 @@ import { splitClipAt } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 import { EFFECT_LABELS, EFFECT_TYPES, type Animation, type EffectType, type Project, type TextPreset } from "@/lib/types";
 import { deleteSelection } from "@/lib/actions";
+import ColorField from "./ColorField";
 import Field from "./Field";
 
 /** Updates an item in place; consecutive edits of the same field are merged into one undo step. */
@@ -101,7 +102,7 @@ export default function Inspector() {
                 </select>
               </Field>
               <Field label="Color">
-                <input type="color" className="h-8 w-full" value={o.color ?? (o.preset === "etiqueta" || o.preset === "cta" ? "#ff3d71" : "#ffffff")} onChange={(e) => set({ color: e.target.value })} />
+                <ColorField id={`text-color-${o.id}`} value={o.color ?? (o.preset === "etiqueta" || o.preset === "cta" ? "#ff3d71" : "#ffffff")} onChange={(c) => set({ color: c })} />
               </Field>
             </div>
           </>

@@ -8,6 +8,7 @@ import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { store, useEditor } from "@/lib/store";
 import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type SfxName, type SubtitlePreset } from "@/lib/types";
 import BrandPanel from "./BrandPanel";
+import ColorField from "./ColorField";
 import Field from "./Field";
 import PublishPanel from "./PublishPanel";
 import ReferencesPanel from "./ReferencesPanel";
@@ -196,10 +197,10 @@ function SubtitlesTab() {
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Color">
-            <input type="color" className="h-8 w-full" value={style.color} onChange={(e) => A.styleSubtitles({ color: e.target.value })} />
+            <ColorField id="sub-color" value={style.color} onChange={(c) => A.styleSubtitles({ color: c })} />
           </Field>
           <Field label="Resaltado">
-            <input type="color" className="h-8 w-full" value={style.highlight} onChange={(e) => A.styleSubtitles({ highlight: e.target.value })} />
+            <ColorField id="sub-highlight" value={style.highlight} onChange={(c) => A.styleSubtitles({ highlight: c })} />
           </Field>
           <Field label="Posición">
             <select className="input" value={style.position} onChange={(e) => A.styleSubtitles({ position: e.target.value as "top" })}>

@@ -16,6 +16,16 @@ export default function Preview() {
   const aspect = useEditor((s) => s.project.aspect);
   const duration = useEditor((s) => contentDuration(s.project));
   const empty = useEditor((s) => s.assets.length === 0);
+  const picking = useEditor((s) => !!s.eyedropper);
+  const [hoverColor, setHoverColor] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!picking) return;
+    getPlayer()?.pause();
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && store.set({ eyedropper: null });
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [picking]);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [dragOver, setDragOver] = useState(false);
 
@@ -49,6 +59,16 @@ export default function Preview() {
   const onDown = (e: React.PointerEvent) => {
     const s = store.get();
     const pt = toCanvas(e);
+    // eyedropper: take the color of the tapped pixel
+    if (s.eyedropper) {
+      const px = canvasRef.current!
+        .getContext("2d")!
+        .getImageData(Math.max(0, Math.min(w - 1, Math.round(pt.x))), Math.max(0, Math.min(h - 1, Math.round(pt.y))), 1, 1).data;
+      const hex = `#${[px[0], px[1], px[2]].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+      s.eyedropper.apply(hex);
+      store.set({ eyedropper: null });
+      return;
+    }
     const ctx = canvasRef.current!.getContext("2d")!;
     const imgs = getPlayer()?.images ?? new Map();
     const hits = s.project.overlays.filter((o) => s.time >= o.start && s.time < o.end);
@@ -65,6 +85,14 @@ export default function Preview() {
     getPlayer()?.toggle();
   };
   const onMove = (e: React.PointerEvent) => {
+    if (store.get().eyedropper) {
+      const pt = toCanvas(e);
+      const px = canvasRef.current!
+        .getContext("2d")!
+        .getImageData(Math.max(0, Math.min(w - 1, Math.round(pt.x))), Math.max(0, Math.min(h - 1, Math.round(pt.y))), 1, 1).data;
+      setHoverColor(`rgb(${px[0]},${px[1]},${px[2]})`);
+      return;
+    }
     const d = drag.current;
     if (!d) return;
     const pt = toCanvas(e);
@@ -103,11 +131,23 @@ export default function Preview() {
           width={w}
           height={h}
           style={{ width: w * scale, height: h * scale, visibility: empty ? "hidden" : "visible" }}
-          className="rounded-md shadow-2xl"
+          className={`rounded-md shadow-2xl ${picking ? "cursor-crosshair ring-2 ring-[var(--accent)]" : ""}`}
           onPointerDown={onDown}
           onPointerMove={onMove}
           onPointerUp={onUp}
         />
+        {picking && (
+          <div className="pointer-events-none absolute top-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-sm text-white shadow-lg">
+            <span className="h-4 w-4 rounded-full border border-white/50" style={{ background: hoverColor ?? "transparent" }} />
+            💧 Tocá el video para tomar un color
+            <button
+              className="pointer-events-auto ml-1 rounded-full bg-white/15 px-2 text-xs hover:bg-white/25"
+              onClick={() => store.set({ eyedropper: null })}
+            >
+              Cancelar
+            </button>
+          </div>
+        )}
         {empty && (
           <label className="absolute inset-6 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[var(--line)] text-center hover:border-[var(--accent)]">
             <div className="grad grid h-14 w-14 place-items-center rounded-2xl text-2xl text-white">⬆</div>
