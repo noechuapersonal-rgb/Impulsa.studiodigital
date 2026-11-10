@@ -13,6 +13,7 @@ import ExportButton from "./ExportButton";
 import Preview from "./Preview";
 import SidePanel from "./SidePanel";
 import Timeline from "./Timeline";
+import TrialWelcome from "./TrialWelcome";
 
 export interface EditorAccount {
   email: string;
@@ -83,6 +84,7 @@ export default function Editor({ account }: { account?: EditorAccount }) {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
+      {account && <TrialWelcome account={account} />}
       <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--line)] px-4">
         <Link href="/" className="flex items-center gap-2 font-extrabold">
           <span className="grad grid h-7 w-7 place-items-center rounded-lg text-sm text-white">▶</span>
@@ -130,9 +132,13 @@ export default function Editor({ account }: { account?: EditorAccount }) {
         </button>
         <ExportButton disabled={!hasAssets} />
         {account?.trialDaysLeft != null && (
-          <Link href="/cuenta" className="btn !border-amber-500/40 text-amber-200" title="Ver planes">
+          <button
+            className="btn !border-amber-500/40 text-amber-200"
+            title="Ver cómo funciona la prueba"
+            onClick={() => window.dispatchEvent(new Event("impulsa-welcome"))}
+          >
             🎁 Prueba: {account.trialDaysLeft} {account.trialDaysLeft === 1 ? "día" : "días"}
-          </Link>
+          </button>
         )}
         {account && (
           <Link href="/cuenta" className="btn" title={account.email}>
