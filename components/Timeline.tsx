@@ -47,15 +47,30 @@ export default function Timeline({ mobile = false }: { mobile?: boolean }) {
       })),
     },
     {
-      title: mobile ? "Textos" : "Textos/Fotos",
-      items: project.overlays.map((o) => ({
-        id: o.id,
-        kind: "overlay",
-        start: o.start,
-        end: o.end,
-        label: o.kind === "text" ? `T  ${o.text}` : `🖼 ${name(o.assetId)}`,
-        color: o.kind === "text" ? "#b4367a" : "#a1531f",
-      })),
+      title: "Fotos",
+      items: project.overlays
+        .filter((o) => o.kind === "image")
+        .map((o) => ({
+          id: o.id,
+          kind: "overlay" as const,
+          start: o.start,
+          end: o.end,
+          label: `🖼 ${name(o.assetId)}`,
+          color: "#a1531f",
+        })),
+    },
+    {
+      title: "Textos",
+      items: project.overlays
+        .filter((o) => o.kind === "text")
+        .map((o) => ({
+          id: o.id,
+          kind: "overlay" as const,
+          start: o.start,
+          end: o.end,
+          label: `T  ${o.text}`,
+          color: "#b4367a",
+        })),
     },
     {
       title: mobile ? "Subs" : "Subtítulos",

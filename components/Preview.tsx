@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { addFiles } from "@/lib/media";
 import { getPlayer, Player, setPlayer } from "@/lib/player";
+import AddMenu from "./AddMenu";
 import { canvasSize, contentDuration, fmt } from "@/lib/project";
 import { overlayBounds } from "@/lib/render";
 import { store, useEditor } from "@/lib/store";
@@ -186,13 +187,14 @@ export default function Preview() {
           </button>
         )}
       </div>
-      <div className="flex h-12 shrink-0 items-center gap-3 border-t border-[var(--line)] px-3 md:px-4">
+      <div className="flex h-12 shrink-0 items-center gap-2 border-t border-[var(--line)] px-3 md:gap-3 md:px-4">
         <button className="btn" onClick={() => getPlayer()?.seek(0)} title="Inicio">
           ⏮
         </button>
         <button className="btn btn-primary w-12 justify-center" onClick={() => getPlayer()?.toggle()} title="Reproducir (Espacio)">
           {playing ? "❚❚" : "▶"}
         </button>
+        <AddMenu />
         <span className="font-mono text-sm tabular-nums">
           {fmt(time)} <span className="text-[var(--muted)]">/ {fmt(duration)}</span>
         </span>
