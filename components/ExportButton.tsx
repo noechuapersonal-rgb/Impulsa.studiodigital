@@ -28,7 +28,7 @@ export default function ExportButton({ disabled }: { disabled: boolean }) {
   return (
     <>
       <button className="btn btn-primary" disabled={disabled || progress !== null} onClick={run}>
-        ⬇ Exportar
+        ⬇<span className="hidden sm:inline"> Exportar</span>
       </button>
       {(progress !== null || result) && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4">

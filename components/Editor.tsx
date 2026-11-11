@@ -44,6 +44,19 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
   const projectName = useEditor((s) => s.projectName);
   const saveState = useEditor((s) => s.saveState);
   const opened = useRef(false);
+  const hasContent = useEditor((s) => s.assets.length > 0 || s.project.clips.length > 0);
+  const saveLabel =
+    saveState === "saving"
+      ? "Guardando…"
+      : saveState === "saved"
+        ? "✓ Guardado en tu cuenta"
+        : saveState === "local"
+          ? "✓ Guardado en este dispositivo"
+          : saveState === "error"
+            ? "⚠ No se pudo guardar"
+            : hasContent
+              ? "Se guarda solo"
+              : "Se guarda solo cuando subas un video";
 
   // open a saved project (?p=id) once the player exists
   useEffect(() => {
@@ -162,7 +175,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
     <div className="flex h-[100dvh] flex-col overflow-hidden">
       {account && <TrialWelcome account={account} />}
       <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-[var(--line)] px-2 md:gap-3 md:px-4">
-        <Link href="/" className="flex items-center gap-2 font-extrabold">
+        <Link href="/" className="hidden items-center gap-2 font-extrabold md:flex">
           <span className="grad grid h-7 w-7 place-items-center rounded-lg text-sm text-white">▶</span>
           <span className="hidden sm:inline">
             Impulsa <span className="grad-text">Studio</span>
@@ -180,17 +193,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
             value={projectName}
             onChange={(e) => store.set({ projectName: e.target.value || DEFAULT_NAME })}
           />
-          <span className="px-1 text-[10px] text-[var(--muted)]">
-            {saveState === "saving"
-              ? "Guardando…"
-              : saveState === "saved"
-                ? "✓ Guardado en tu cuenta"
-                : saveState === "local"
-                  ? "✓ Guardado en este dispositivo"
-                  : saveState === "error"
-                    ? "⚠ No se pudo guardar"
-                    : "Se guarda solo"}
-          </span>
+          <span className="px-1 text-[10px] text-[var(--muted)]">{saveLabel}</span>
         </div>
         <div className="mx-1 hidden h-6 w-px bg-[var(--line)] md:block" />
         <button className="btn !px-2.5 md:!px-3" disabled={!canUndo} onClick={() => store.undo()} title="Deshacer (Ctrl+Z)">
@@ -249,6 +252,17 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
         )}
       </header>
 
+      {/* phones: project name and save status under the header */}
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--line)] px-3 py-1 md:hidden">
+        <input
+          id="project-name-mobile"
+          aria-label="Nombre del proyecto"
+          className="min-w-0 flex-1 truncate rounded bg-transparent px-1 text-sm font-semibold outline-none focus:bg-[var(--panel-2)]"
+          value={projectName}
+          onChange={(e) => store.set({ projectName: e.target.value || DEFAULT_NAME })}
+        />
+        <span className={`shrink-0 text-[11px] ${saveState === "error" ? "text-red-300" : "text-[var(--muted)]"}`}>{saveLabel}</span>
+      </div>
       {busy && (
         <div className="flex shrink-0 items-center gap-2 border-b border-[var(--line)] px-3 py-1.5 text-xs text-[var(--muted)] md:hidden">
           <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
