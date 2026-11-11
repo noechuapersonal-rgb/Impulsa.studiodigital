@@ -264,11 +264,13 @@ function drawOverlay(
   H: number,
   images: Map<string, HTMLImageElement>,
 ) {
-  const a = animState(o, t);
+  const full = o.kind === "image" && (o.fill === "cover" || o.fill === "contain");
+  let a = animState(o, t);
+  // a full-screen photo at the very start is visible from the first frame (no fade from black)
+  if (full && o.start < 0.05) a = { ...a, alpha: Math.min(1, Math.max(0, (o.end - t) / 0.3)), scale: 1, offY: 0 };
   const u = Math.min(W, H) / 720;
   ctx.save();
   ctx.globalAlpha = a.alpha;
-  const full = o.kind === "image" && (o.fill === "cover" || o.fill === "contain");
   const cx = full ? W / 2 : o.x * W;
   const cy = (full ? 0.5 + a.offY : o.y + a.offY) * H;
   ctx.translate(cx, cy);
