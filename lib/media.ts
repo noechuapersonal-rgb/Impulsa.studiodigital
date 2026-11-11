@@ -2,7 +2,7 @@
 
 import { idbPut, MEDIA, persistStorage } from "./idb";
 import { getPlayer } from "./player";
-import { uid } from "./project";
+import { fmt, totalDuration, uid } from "./project";
 import { store } from "./store";
 import type { Asset, AssetKind, Segment } from "./types";
 
@@ -221,8 +221,15 @@ export async function transcribeTimeline(opts?: { language?: string | null; mode
   }
 }
 
-export async function addFiles(files: FileList | File[]) {
+/**
+ * Adds files to the project. Videos go to the end of the video track; photos are placed on the video
+ * at the playhead (3 s each, one after another); music goes under the whole video.
+ */
+export async function addFiles(files: FileList | File[], opts: { autoPlace?: boolean } = {}) {
+  const autoPlace = opts.autoPlace !== false;
   const player = getPlayer();
+  const placed: string[] = [];
+  let photoAt = store.get().time;
   for (const f of Array.from(files)) {
     store.set({ busy: `Cargando ${f.name}…` });
     try {
@@ -247,12 +254,56 @@ export async function addFiles(files: FileList | File[]) {
               : p.aspect,
           clips: [...p.clips, { id: uid(), assetId: a.id, in: 0, out: a.duration, volume: 1 }],
         }));
+      } else if (autoPlace && a.kind === "image") {
+        const dur = totalDuration(store.get().project);
+        // keep photos inside the video when there is one
+        const start = dur > 0 ? Math.min(photoAt, Math.max(0, dur - 3)) : photoAt;
+        const end = dur > 0 ? Math.min(start + 3, dur) : start + 3;
+        store.edit((p) => ({
+          ...p,
+          overlays: [
+            ...p.overlays,
+            { id: uid(), kind: "image", assetId: a.id, start, end, x: 0.5, y: 0.5, size: 0.7, animation: "fade" },
+          ],
+        }));
+        placed.push(`🖼 ${a.name}: ${fmt(start)}–${fmt(end)}`);
+        photoAt = end;
+      } else if (autoPlace && a.kind === "audio") {
+        const p = store.get().project;
+        const dur = totalDuration(p);
+        const hasMusic = p.audio.some((x) => x.kind === "music");
+        const start = hasMusic ? store.get().time : 0;
+        const length = dur > 0 ? Math.max(0.5, dur - start) : a.duration;
+        store.edit((pr) => ({
+          ...pr,
+          audio: [
+            ...pr.audio,
+            {
+              id: uid(),
+              kind: "music",
+              assetId: a.id,
+              name: a.name,
+              start,
+              duration: length,
+              offset: 0,
+              // quieter when the video has a voice track
+              volume: pr.clips.length ? 0.25 : 0.8,
+              fadeIn: 1,
+              fadeOut: 2,
+              loop: true,
+            },
+          ],
+        }));
+        placed.push(`♪ ${a.name}: de fondo desde ${fmt(start)}`);
       }
     } catch (e) {
       alert((e as Error).message);
     } finally {
       store.set({ busy: null });
     }
+  }
+  if (placed.length) {
+    store.set({ toast: `Agregado al video — ${placed.join(" · ")}. Podés moverlo en la línea de tiempo.` });
   }
 }
 

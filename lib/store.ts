@@ -23,6 +23,8 @@ export interface EditorState {
   saveState: "idle" | "saving" | "saved" | "local" | "error";
   /** files of an opened project that are not on this device (must be chosen again) */
   missingAssets: AssetMeta[];
+  /** short notice shown at the bottom of the editor */
+  toast: string | null;
   past: Project[];
   future: Project[];
 }
@@ -42,6 +44,7 @@ let state: EditorState = {
   projectName: "Proyecto sin título",
   saveState: "idle",
   missingAssets: [],
+  toast: null,
   past: [],
   future: [],
 };

@@ -101,7 +101,12 @@ function MediaTab() {
           }}
         />
       </label>
-      {!assets.length && <p className="text-sm text-[var(--muted)]">Aún no hay archivos. Los videos se añaden automáticamente a la línea de tiempo.</p>}
+      {!assets.length && (
+        <p className="text-sm text-[var(--muted)]">
+          Aún no hay archivos. Todo lo que subas se agrega solo: los videos al final, las fotos donde está parado el video
+          y la música de fondo.
+        </p>
+      )}
       {assets.some((a) => a.kind === "video") && (
         <button
           className="btn w-full justify-center"

@@ -13,6 +13,7 @@ import { useIsMobile } from "@/lib/useIsMobile";
 import Chat from "./Chat";
 import ExportButton from "./ExportButton";
 import MissingFiles from "./MissingFiles";
+import Toast from "./Toast";
 import Preview from "./Preview";
 import SidePanel from "./SidePanel";
 import Timeline from "./Timeline";
@@ -174,6 +175,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden">
       {account && <TrialWelcome account={account} />}
+      <Toast />
       <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-[var(--line)] px-2 md:gap-3 md:px-4">
         <Link href="/" className="hidden items-center gap-2 font-extrabold md:flex">
           <span className="grad grid h-7 w-7 place-items-center rounded-lg text-sm text-white">▶</span>
