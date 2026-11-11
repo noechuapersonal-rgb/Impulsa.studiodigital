@@ -2,7 +2,7 @@
 
 import { idbPut, MEDIA, persistStorage } from "./idb";
 import { getPlayer } from "./player";
-import { fmt, totalDuration, uid } from "./project";
+import { fmt, nextPhotoSlot, totalDuration, uid } from "./project";
 import { store } from "./store";
 import type { Asset, AssetKind, Segment } from "./types";
 
@@ -229,7 +229,6 @@ export async function addFiles(files: FileList | File[], opts: { autoPlace?: boo
   const autoPlace = opts.autoPlace !== false;
   const player = getPlayer();
   const placed: string[] = [];
-  let photoAt = store.get().time;
   for (const f of Array.from(files)) {
     store.set({ busy: `Cargando ${f.name}…` });
     try {
@@ -255,19 +254,15 @@ export async function addFiles(files: FileList | File[], opts: { autoPlace?: boo
           clips: [...p.clips, { id: uid(), assetId: a.id, in: 0, out: a.duration, volume: 1 }],
         }));
       } else if (autoPlace && a.kind === "image") {
-        const dur = totalDuration(store.get().project);
-        // keep photos inside the video when there is one
-        const start = dur > 0 ? Math.min(photoAt, Math.max(0, dur - 3)) : photoAt;
-        const end = dur > 0 ? Math.min(start + 3, dur) : start + 3;
+        const slot = nextPhotoSlot(store.get().project, store.get().time);
         store.edit((p) => ({
           ...p,
           overlays: [
             ...p.overlays,
-            { id: uid(), kind: "image", assetId: a.id, start, end, x: 0.5, y: 0.5, size: 0.7, animation: "fade" },
+            { id: uid(), kind: "image", assetId: a.id, start: slot.start, end: slot.end, x: 0.5, y: 0.5, size: 0.7, animation: "fade" },
           ],
         }));
-        placed.push(`🖼 ${a.name}: ${fmt(start)}–${fmt(end)}`);
-        photoAt = end;
+        placed.push(`🖼 ${a.name}: ${fmt(slot.start)}–${fmt(slot.end)}${slot.full ? " (ya no quedaba lugar libre, se superpone)" : ""}`);
       } else if (autoPlace && a.kind === "audio") {
         const p = store.get().project;
         const dur = totalDuration(p);

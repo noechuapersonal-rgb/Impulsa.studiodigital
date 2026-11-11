@@ -372,3 +372,23 @@ export function positionToXY(pos: string): { x: number; y: number } {
       return { x: 0.5, y: 0.5 };
   }
 }
+
+/**
+ * Where the next photo goes: right after the last photo already on the video (or at the playhead when
+ * there are none). Logos that cover almost the whole video don't count as photos.
+ * `full` is true when there was no room left and the photo had to overlap another one.
+ */
+export function nextPhotoSlot(p: Project, playhead: number, len = 3): { start: number; end: number; full: boolean } {
+  const dur = totalDuration(p);
+  const photos = p.overlays.filter(
+    (o) => o.kind === "image" && !(dur > 0 && o.end - o.start >= dur * 0.9),
+  );
+  let start = photos.length ? Math.max(...photos.map((o) => o.end)) : playhead;
+  if (dur <= 0) return { start, end: start + len, full: false };
+  if (start + 1 > dur) {
+    // no room left after the last photo: put it at the playhead (or the last seconds of the video)
+    start = Math.max(0, Math.min(playhead, dur - len));
+    return { start, end: Math.min(dur, start + len), full: true };
+  }
+  return { start, end: Math.min(dur, start + len), full: false };
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import * as A from "@/lib/actions";
 import { addFiles, WHISPER_MODELS, transcribeTimeline } from "@/lib/media";
-import { SUBTITLE_PRESETS, fmt } from "@/lib/project";
+import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { store, useEditor } from "@/lib/store";
 import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type SfxName, type SubtitlePreset } from "@/lib/types";
@@ -148,7 +148,11 @@ function MediaTab() {
                     ...p,
                     clips: [...p.clips, { id: Math.random().toString(36).slice(2), assetId: a.id, in: 0, out: a.duration, volume: 1 }],
                   }));
-                else if (a.kind === "image") A.addImage({ asset: a.id, start: t, end: t + 3 });
+                else if (a.kind === "image") {
+                  const slot = nextPhotoSlot(store.get().project, t);
+                  A.addImage({ asset: a.id, start: slot.start, end: slot.end, size: 0.7, animation: "fade" });
+                  store.set({ toast: `Foto agregada: ${fmt(slot.start)}–${fmt(slot.end)}${slot.full ? " (ya no quedaba lugar libre, se superpone)" : ""}` });
+                }
                 else A.addMusic({ asset: a.id, start: t });
               }}
             >
