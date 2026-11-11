@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { emptyProject } from "./project";
-import type { Asset, BrandKit, Project, Segment, Selection } from "./types";
+import type { Asset, AssetMeta, BrandKit, Project, Segment, Selection } from "./types";
 
 export interface EditorState {
   project: Project;
@@ -17,6 +17,12 @@ export interface EditorState {
   activeRefs: string[];
   /** when set, the next tap on the video preview picks a color for this field */
   eyedropper: { id: string; apply: (hex: string) => void } | null;
+  /** saved project currently open */
+  projectId: string | null;
+  projectName: string;
+  saveState: "idle" | "saving" | "saved" | "local" | "error";
+  /** files of an opened project that are not on this device (must be chosen again) */
+  missingAssets: AssetMeta[];
   past: Project[];
   future: Project[];
 }
@@ -32,6 +38,10 @@ let state: EditorState = {
   brand: null,
   activeRefs: [],
   eyedropper: null,
+  projectId: null,
+  projectName: "Proyecto sin título",
+  saveState: "idle",
+  missingAssets: [],
   past: [],
   future: [],
 };

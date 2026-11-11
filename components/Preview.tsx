@@ -15,7 +15,8 @@ export default function Preview() {
   const playing = useEditor((s) => s.playing);
   const aspect = useEditor((s) => s.project.aspect);
   const duration = useEditor((s) => contentDuration(s.project));
-  const empty = useEditor((s) => s.assets.length === 0);
+  const empty = useEditor((s) => s.assets.length === 0 && s.missingAssets.length === 0);
+  const waitingFiles = useEditor((s) => s.assets.length === 0 && s.missingAssets.length > 0);
   const picking = useEditor((s) => !!s.eyedropper);
   const [hoverColor, setHoverColor] = useState<string | null>(null);
 
@@ -136,6 +137,11 @@ export default function Preview() {
           onPointerMove={onMove}
           onPointerUp={onUp}
         />
+        {waitingFiles && (
+          <p className="absolute max-w-xs px-4 text-center text-sm text-[var(--muted)]">
+            Elegí de nuevo los archivos del proyecto (arriba) para ver el video.
+          </p>
+        )}
         {picking && (
           <div className="pointer-events-none absolute top-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/80 px-4 py-2 text-sm text-white shadow-lg">
             <span className="h-4 w-4 rounded-full border border-white/50" style={{ background: hoverColor ?? "transparent" }} />

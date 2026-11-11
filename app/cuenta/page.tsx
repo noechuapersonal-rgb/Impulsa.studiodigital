@@ -116,9 +116,14 @@ export default async function CuentaPage({
                 quieras desde tu cuenta de Mercado Pago (Suscripciones).
               </p>
             )}
-            <Link href="/editor" className="btn btn-primary w-full justify-center !py-2.5">
-              Abrir el editor
-            </Link>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <a href="/editor" className="btn btn-primary flex-1 justify-center !py-2.5">
+                + Nuevo proyecto
+              </a>
+              <a href="/proyectos" className="btn flex-1 justify-center !py-2.5">
+                📁 Mis proyectos
+              </a>
+            </div>
           </div>
         ) : (
           <div className="mt-5 space-y-3">

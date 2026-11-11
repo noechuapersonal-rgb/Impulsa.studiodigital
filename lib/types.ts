@@ -12,6 +12,18 @@ export interface Asset {
 }
 
 /** A piece of a source video placed on the main track. Clips play one after another. */
+/** What is stored about a file in a saved project (the file itself stays on the device). */
+export interface AssetMeta {
+  id: string;
+  kind: AssetKind;
+  name: string;
+  duration: number;
+  width?: number;
+  height?: number;
+  size: number;
+  type: string;
+}
+
 export interface Clip {
   id: string;
   assetId: string;

@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { deleteSelection, setFormat } from "@/lib/actions";
 import { loadBrand, loadFont } from "@/lib/brand";
 import { getPlayer } from "@/lib/player";
+import { openProject, saveCurrentProject } from "@/lib/projects";
 import { splitClipAt } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 import type { Aspect, Fit } from "@/lib/types";
 import { useIsMobile } from "@/lib/useIsMobile";
 import Chat from "./Chat";
 import ExportButton from "./ExportButton";
+import MissingFiles from "./MissingFiles";
 import Preview from "./Preview";
 import SidePanel from "./SidePanel";
 import Timeline from "./Timeline";
@@ -24,7 +26,9 @@ export interface EditorAccount {
   trialDaysLeft?: number | null;
 }
 
-export default function Editor({ account }: { account?: EditorAccount }) {
+const DEFAULT_NAME = "Proyecto sin título";
+
+export default function Editor({ account, projectId }: { account?: EditorAccount; projectId?: string }) {
   const busy = useEditor((s) => s.busy);
   const aspect = useEditor((s) => s.project.aspect);
   const fit = useEditor((s) => s.project.fit);
@@ -37,6 +41,65 @@ export default function Editor({ account }: { account?: EditorAccount }) {
   const [mTab, setMTab] = useState<"ia" | "tools" | "timeline">("ia");
   const selection = useEditor((s) => s.selection);
   const picking = useEditor((s) => !!s.eyedropper);
+  const projectName = useEditor((s) => s.projectName);
+  const saveState = useEditor((s) => s.saveState);
+  const opened = useRef(false);
+
+  // open a saved project (?p=id) once the player exists
+  useEffect(() => {
+    if (opened.current) return;
+    opened.current = true;
+    if (projectId) {
+      openProject(projectId).then((ok) => {
+        if (!ok) {
+          store.set({ projectId: null, saveState: "idle" });
+          window.history.replaceState(null, "", "/editor");
+          alert("No encontramos ese proyecto. Empezamos uno nuevo.");
+        }
+      });
+    }
+  }, [projectId]);
+
+  // autosave a couple of seconds after each change
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    let last = store.get();
+    const unsub = store.subscribe(() => {
+      const s = store.get();
+      const changed =
+        s.project !== last.project ||
+        s.transcripts !== last.transcripts ||
+        s.assets !== last.assets ||
+        s.missingAssets !== last.missingAssets ||
+        s.activeRefs !== last.activeRefs ||
+        s.projectName !== last.projectName;
+      last = s;
+      if (!changed || (!s.assets.length && !s.project.clips.length)) return;
+      if (s.busy === "Abriendo proyecto…") return;
+      if (timer) clearTimeout(timer);
+      if (s.saveState !== "saving") store.set({ saveState: "saving" });
+      timer = setTimeout(async () => {
+        timer = null;
+        const st = store.get();
+        if (st.projectName === DEFAULT_NAME) {
+          const first = st.assets.find((a) => a.kind === "video") ?? st.assets[0];
+          if (first) store.set({ projectName: first.name.replace(/\.[^.]+$/, "").slice(0, 60) });
+        }
+        const isNew = !store.get().projectId;
+        try {
+          const where = await saveCurrentProject();
+          store.set({ saveState: where === "cuenta" ? "saved" : "local" });
+          if (isNew) window.history.replaceState(null, "", `/editor?p=${store.get().projectId}`);
+        } catch {
+          store.set({ saveState: "error" });
+        }
+      }, 2000);
+    });
+    return () => {
+      unsub();
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
 
   useEffect(() => {
     if (selection) setMTab("tools");
@@ -86,7 +149,7 @@ export default function Editor({ account }: { account?: EditorAccount }) {
     };
     window.addEventListener("keydown", onKey);
     const beforeUnload = (e: BeforeUnloadEvent) => {
-      if (store.get().assets.length) e.preventDefault();
+      if (store.get().saveState === "saving") e.preventDefault();
     };
     window.addEventListener("beforeunload", beforeUnload);
     return () => {
@@ -105,6 +168,30 @@ export default function Editor({ account }: { account?: EditorAccount }) {
             Impulsa <span className="grad-text">Studio</span>
           </span>
         </Link>
+        {/* plain link (full reload) so the editor starts clean when coming back */}
+        <a href="/proyectos" className="btn !px-2.5 md:!px-3" title="Mis proyectos">
+          📁 <span className="hidden lg:inline">Proyectos</span>
+        </a>
+        <div className="hidden min-w-0 flex-col md:flex">
+          <input
+            id="project-name"
+            aria-label="Nombre del proyecto"
+            className="w-44 truncate rounded bg-transparent px-1 text-sm font-semibold outline-none hover:bg-[var(--panel-2)] focus:bg-[var(--panel-2)] lg:w-56"
+            value={projectName}
+            onChange={(e) => store.set({ projectName: e.target.value || DEFAULT_NAME })}
+          />
+          <span className="px-1 text-[10px] text-[var(--muted)]">
+            {saveState === "saving"
+              ? "Guardando…"
+              : saveState === "saved"
+                ? "✓ Guardado en tu cuenta"
+                : saveState === "local"
+                  ? "✓ Guardado en este dispositivo"
+                  : saveState === "error"
+                    ? "⚠ No se pudo guardar"
+                    : "Se guarda solo"}
+          </span>
+        </div>
         <div className="mx-1 hidden h-6 w-px bg-[var(--line)] md:block" />
         <button className="btn !px-2.5 md:!px-3" disabled={!canUndo} onClick={() => store.undo()} title="Deshacer (Ctrl+Z)">
           ↶
@@ -168,6 +255,8 @@ export default function Editor({ account }: { account?: EditorAccount }) {
           <span className="truncate">{busy}</span>
         </div>
       )}
+
+      <MissingFiles />
 
       {isMobile ? (
         <>

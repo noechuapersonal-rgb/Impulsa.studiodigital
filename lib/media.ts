@@ -1,5 +1,6 @@
 "use client";
 
+import { idbPut, MEDIA, persistStorage } from "./idb";
 import { getPlayer } from "./player";
 import { uid } from "./project";
 import { store } from "./store";
@@ -16,11 +17,11 @@ function kindOf(file: File): AssetKind | null {
   return null;
 }
 
-export async function probeFile(file: File): Promise<Asset | null> {
+export async function probeFile(file: File, id?: string): Promise<Asset | null> {
   const kind = kindOf(file);
   if (!kind) return null;
   const url = URL.createObjectURL(file);
-  const base = { id: uid(), kind, name: file.name, url, file, duration: 0 };
+  const base = { id: id ?? uid(), kind, name: file.name, url, file, duration: 0 };
   if (kind === "video" || kind === "audio") {
     const el = document.createElement(kind);
     el.preload = "metadata";
@@ -229,6 +230,9 @@ export async function addFiles(files: FileList | File[]) {
       if (!a) continue;
       await player?.addAsset(a);
       store.set((s) => ({ assets: [...s.assets, a] }));
+      // keep the file on this device so the project can be reopened later
+      idbPut(MEDIA, a.id, f).catch(() => undefined);
+      persistStorage();
       if (a.kind === "video") {
         const first = store.get().project.clips.length === 0;
         store.edit((p) => ({

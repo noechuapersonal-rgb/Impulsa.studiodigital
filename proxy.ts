@@ -30,16 +30,16 @@ export async function proxy(request: NextRequest) {
   } = await sb.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const protectedPage = ["/editor", "/cuenta", "/admin"].some((p) => path === p || path.startsWith(`${p}/`));
+  const protectedPage = ["/editor", "/cuenta", "/admin", "/proyectos"].some((p) => path === p || path.startsWith(`${p}/`));
   if (!user && protectedPage) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
-    login.search = `?next=${encodeURIComponent(path)}`;
+    login.search = `?next=${encodeURIComponent(path + request.nextUrl.search)}`;
     return NextResponse.redirect(login);
   }
   return response;
 }
 
 export const config = {
-  matcher: ["/", "/editor/:path*", "/cuenta/:path*", "/admin/:path*", "/login"],
+  matcher: ["/", "/editor/:path*", "/cuenta/:path*", "/admin/:path*", "/proyectos/:path*", "/login"],
 };
