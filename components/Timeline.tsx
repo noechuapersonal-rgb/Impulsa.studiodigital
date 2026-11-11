@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getPlayer } from "@/lib/player";
 import { clipDur, clipStarts, contentDuration } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
@@ -28,6 +28,17 @@ export default function Timeline({ mobile = false }: { mobile?: boolean }) {
   const selection = useEditor((s) => s.selection);
   const [pps, setPps] = useState(mobile ? 24 : 40); // pixels per second
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // follow the playhead (while playing or dragging) so it never leaves the screen
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const x = LABEL_W + time * pps;
+    const left = el.scrollLeft + LABEL_W + 16;
+    const right = el.scrollLeft + el.clientWidth - 24;
+    if (x < left) el.scrollLeft = Math.max(0, x - LABEL_W - 40);
+    else if (x > right) el.scrollLeft = x - el.clientWidth + 80;
+  }, [time, pps, LABEL_W]);
 
   const duration = Math.max(contentDuration(project), 10);
   const width = duration * pps + 200;
@@ -166,7 +177,7 @@ export default function Timeline({ mobile = false }: { mobile?: boolean }) {
       </div>
       <div ref={scrollRef} className="scroll-thin relative min-h-0 flex-1 overflow-auto">
         <div style={{ width: width + LABEL_W }} className="relative min-h-full">
-          <div className="sticky top-0 z-20 flex h-6 bg-[var(--panel)]">
+          <div className={`sticky top-0 z-20 flex bg-[var(--panel)] ${mobile ? "h-9" : "h-6"}`}>
             <div style={{ width: LABEL_W }} className="sticky left-0 z-10 shrink-0 bg-[var(--panel)]" />
             <div className="relative flex-1 cursor-ew-resize border-b border-[var(--line)]" style={{ touchAction: "none" }} onPointerDown={scrub}>
               {ticks.map((t) => (
@@ -213,7 +224,18 @@ export default function Timeline({ mobile = false }: { mobile?: boolean }) {
             </div>
           ))}
           <div className="pointer-events-none absolute top-0 bottom-0 z-30 w-px bg-[#ff4d6d]" style={{ left: LABEL_W + time * pps }}>
-            <div className="absolute -top-0 -left-1.5 h-3 w-3 rotate-45 bg-[#ff4d6d]" />
+            {/* big grab handle: drag the playhead back and forth */}
+            <div
+              className="pointer-events-auto absolute -top-0.5 -left-4 grid h-8 w-8 cursor-ew-resize place-items-start justify-center"
+              style={{ touchAction: "none" }}
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                scrub(e);
+              }}
+              title="Arrastrá para moverte por el video"
+            >
+              <div className={`rotate-45 rounded-sm bg-[#ff4d6d] shadow ${mobile ? "mt-1 h-4 w-4" : "mt-0.5 h-3 w-3"}`} />
+            </div>
           </div>
         </div>
       </div>

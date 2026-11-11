@@ -190,7 +190,22 @@ export default function Preview() {
           </button>
         )}
       </div>
-      <div className="flex h-12 shrink-0 items-center gap-2 border-t border-[var(--line)] px-3 md:gap-3 md:px-4">
+      {/* seek bar: drag to move back and forth through the video */}
+      <div className="shrink-0 border-t border-[var(--line)] px-3 pt-2 md:px-4">
+        <input
+          id="seek"
+          type="range"
+          aria-label="Moverse por el video"
+          min={0}
+          max={Math.max(duration, 0.01)}
+          step={0.01}
+          value={Math.min(time, duration)}
+          disabled={duration <= 0}
+          onChange={(e) => getPlayer()?.seek(Number(e.target.value))}
+          className="seek w-full"
+        />
+      </div>
+      <div className="flex h-12 shrink-0 items-center gap-2 px-3 md:gap-3 md:px-4">
         <button className="btn" onClick={() => getPlayer()?.seek(0)} title="Inicio">
           ⏮
         </button>

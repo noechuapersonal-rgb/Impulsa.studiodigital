@@ -104,3 +104,39 @@ input[type="range"] {
     min-height: 38px;
   }
 }
+
+/* seek bar under the video: thick and easy to drag with a finger */
+input[type="range"].seek {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 22px;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+}
+input[type="range"].seek::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel-2);
+}
+input[type="range"].seek::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--panel-2);
+}
+input[type="range"].seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  margin-top: -7px;
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  background: #ff4d6d;
+  border: 2px solid white;
+}
+input[type="range"].seek::-moz-range-thumb {
+  height: 18px;
+  width: 18px;
+  border-radius: 999px;
+  background: #ff4d6d;
+  border: 2px solid white;
+}
