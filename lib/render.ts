@@ -240,6 +240,7 @@ const TEXT_PRESETS = {
 export function overlayBounds(o: Overlay, W: number, H: number, images: Map<string, HTMLImageElement>, ctx?: CanvasRenderingContext2D) {
   const u = Math.min(W, H) / 720;
   if (o.kind === "image") {
+    if (o.fill === "cover" || o.fill === "contain") return { x: 0, y: 0, w: W, h: H };
     const img = o.assetId ? images.get(o.assetId) : undefined;
     const w = W * o.size;
     const h = img && img.naturalWidth ? (w * img.naturalHeight) / img.naturalWidth : w;
@@ -267,11 +268,30 @@ function drawOverlay(
   const u = Math.min(W, H) / 720;
   ctx.save();
   ctx.globalAlpha = a.alpha;
-  const cx = o.x * W;
-  const cy = (o.y + a.offY) * H;
+  const full = o.kind === "image" && (o.fill === "cover" || o.fill === "contain");
+  const cx = full ? W / 2 : o.x * W;
+  const cy = (full ? 0.5 + a.offY : o.y + a.offY) * H;
   ctx.translate(cx, cy);
   ctx.scale(a.scale, a.scale);
-  if (o.kind === "image") {
+  if (full) {
+    // full-frame photo that follows the video format (9:16, 16:9…)
+    const img = o.assetId ? images.get(o.assetId) : undefined;
+    if (img && img.complete && img.naturalWidth) {
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      const cover = Math.max(W / iw, H / ih);
+      if (o.fill === "contain") {
+        ctx.save();
+        ctx.filter = `blur(${Math.round(Math.min(W, H) / 22)}px) brightness(0.55)`;
+        ctx.drawImage(img, (-iw * cover * 1.1) / 2, (-ih * cover * 1.1) / 2, iw * cover * 1.1, ih * cover * 1.1);
+        ctx.restore();
+        const s = Math.min(W / iw, H / ih);
+        ctx.drawImage(img, (-iw * s) / 2, (-ih * s) / 2, iw * s, ih * s);
+      } else {
+        ctx.drawImage(img, (-iw * cover) / 2, (-ih * cover) / 2, iw * cover, ih * cover);
+      }
+    }
+  } else if (o.kind === "image") {
     const img = o.assetId ? images.get(o.assetId) : undefined;
     if (img && img.complete && img.naturalWidth) {
       const w = W * o.size;

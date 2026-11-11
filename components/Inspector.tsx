@@ -108,9 +108,25 @@ export default function Inspector() {
           </>
         )}
         {timeFields(o.start, o.end, (s, e) => set({ start: s, end: Math.max(s + 0.1, e) }, "time"))}
-        <Field label={`Tamaño ${o.size.toFixed(2)}`}>
-          <input type="range" min={o.kind === "image" ? 0.05 : 0.3} max={o.kind === "image" ? 1 : 3} step={0.01} value={o.size} className="w-full" onChange={(e) => set({ size: Number(e.target.value) })} />
-        </Field>
+        {o.kind === "image" && (
+          <Field label="En pantalla">
+            <select
+              id={`fill-${o.id}`}
+              className="input"
+              value={o.fill ?? "free"}
+              onChange={(e) => set({ fill: e.target.value as "cover" | "contain" | "free" })}
+            >
+              <option value="cover">Pantalla completa (recorta lo que sobra)</option>
+              <option value="contain">Completa sin recortar (fondo desenfocado)</option>
+              <option value="free">Libre (mover y achicar, para logos)</option>
+            </select>
+          </Field>
+        )}
+        {(o.kind === "text" || !o.fill || o.fill === "free") && (
+          <Field label={`Tamaño ${o.size.toFixed(2)}`}>
+            <input type="range" min={o.kind === "image" ? 0.05 : 0.3} max={o.kind === "image" ? 1 : 3} step={0.01} value={o.size} className="w-full" onChange={(e) => set({ size: Number(e.target.value) })} />
+          </Field>
+        )}
         <Field label="Animación">
           <select className="input" value={o.animation} onChange={(e) => set({ animation: e.target.value as Animation })}>
             <option value="none">Ninguna</option>

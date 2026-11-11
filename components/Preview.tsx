@@ -73,7 +73,10 @@ export default function Preview() {
     }
     const ctx = canvasRef.current!.getContext("2d")!;
     const imgs = getPlayer()?.images ?? new Map();
-    const hits = s.project.overlays.filter((o) => s.time >= o.start && s.time < o.end);
+    // full-screen photos are not dragged (they always fill the frame); a tap there plays/pauses
+    const hits = s.project.overlays.filter(
+      (o) => s.time >= o.start && s.time < o.end && !(o.kind === "image" && (o.fill === "cover" || o.fill === "contain")),
+    );
     for (let i = hits.length - 1; i >= 0; i--) {
       const o = hits[i];
       const b = overlayBounds(o, w, h, imgs, ctx);

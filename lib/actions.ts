@@ -151,6 +151,7 @@ export function addImage(o: {
   y?: number;
   size?: number;
   animation?: string;
+  fill?: string;
 }) {
   const a = findAsset(o.asset, "image");
   if (!a) throw new Error(`No encontré la imagen "${o.asset}". Súbela primero en Medios.`);
@@ -175,11 +176,16 @@ export function addImage(o: {
         y,
         size: Math.min(1, Math.max(0.05, num(o.size, 0.4))),
         animation: anim(o.animation, "pop"),
+        fill: imageFill(o.fill, o.size !== undefined || o.position !== undefined || o.x !== undefined ? "free" : "cover"),
       },
     ],
   }));
   return id;
 }
+
+const FILLS = ["cover", "contain", "free"] as const;
+const imageFill = (v: unknown, d: (typeof FILLS)[number]) =>
+  (FILLS as readonly string[]).includes(v as string) ? (v as (typeof FILLS)[number]) : d;
 
 const PRESETS: TextPreset[] = ["titulo", "subtitulo", "etiqueta", "cta"];
 
@@ -382,6 +388,7 @@ export function updateItem(id: string, o: Record<string, unknown>): string {
               color: typeof o.color === "string" ? o.color : x.color,
               preset: PRESETS.includes(o.preset as TextPreset) ? (o.preset as TextPreset) : x.preset,
               animation: anim(o.animation, x.animation),
+              fill: x.kind === "image" ? imageFill(o.fill, x.fill ?? "free") : x.fill,
               size: clamp(n(o.size), x.kind === "image" ? 0.05 : 0.3, x.kind === "image" ? 1 : 3) ?? x.size,
               x: clamp(n(o.x), 0, 1) ?? xy?.x ?? x.x,
               y: clamp(n(o.y), 0, 1) ?? xy?.y ?? x.y,
@@ -497,7 +504,7 @@ export function describeProject(): string {
     L.push("Textos e imágenes superpuestos (posición x,y de 0 a 1 desde arriba a la izquierda):");
     for (const o of p.overlays)
       L.push(
-        `  - [${o.id}] ${o.kind === "text" ? `texto "${o.text}" (${o.preset}${o.color ? `, color ${o.color}` : ""})` : `imagen "${name(o.assetId)}"`} ${o.start.toFixed(2)}–${o.end.toFixed(2)}s, x=${o.x.toFixed(2)} y=${o.y.toFixed(2)}, tamaño ${o.size.toFixed(2)}, animación ${o.animation}`,
+        `  - [${o.id}] ${o.kind === "text" ? `texto "${o.text}" (${o.preset}${o.color ? `, color ${o.color}` : ""})` : `imagen "${name(o.assetId)}"`} ${o.start.toFixed(2)}–${o.end.toFixed(2)}s, ${o.kind === "image" && (o.fill === "cover" || o.fill === "contain") ? `pantalla completa (${o.fill})` : `x=${o.x.toFixed(2)} y=${o.y.toFixed(2)}, tamaño ${o.size.toFixed(2)}`}, animación ${o.animation}`,
       );
   }
   if (p.audio.length) {

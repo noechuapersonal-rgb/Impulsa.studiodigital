@@ -121,7 +121,13 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
         position,
         x: { type: "number", description: "Opcional: centro horizontal exacto, 0 (izquierda) a 1 (derecha). Tiene prioridad sobre position." },
         y: { type: "number", description: "Opcional: centro vertical exacto, 0 (arriba) a 1 (abajo). Tiene prioridad sobre position." },
-        size: { type: "number", description: "Ancho relativo al lienzo (0.05–1). 1 = pantalla completa" },
+        size: { type: "number", description: "Solo con fill free: ancho relativo al lienzo (0.05–1)" },
+        fill: {
+          type: "string",
+          enum: ["cover", "contain", "free"],
+          description:
+            "cover: la foto llena toda la pantalla del formato (por defecto para fotos de producto, lugar o escena). contain: se ve la foto entera con fondo desenfocado. free: tamaño y posición libres (logos, sellos, fotos chicas).",
+        },
         animation,
       },
       required: ["asset", "start", "end"],
@@ -281,6 +287,7 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
         y: { type: "number", description: "0–1" },
         size: { type: "number" },
         animation,
+        fill: { type: "string", enum: ["cover", "contain", "free"], description: "Para imágenes: pantalla completa, completa sin recortar o libre" },
         effect: { type: "string", description: "Para efectos visuales: nuevo tipo" },
         intensity: { type: "number", description: "Para efectos visuales: 0–1" },
         volume: { type: "number", description: "Para sonidos y música: 0–2" },

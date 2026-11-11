@@ -58,6 +58,11 @@ export interface Overlay {
   y: number;
   /** image: width as fraction of canvas width; text: font size multiplier */
   size: number;
+  /**
+   * images only: "cover" fills the whole frame (crops), "contain" shows the whole photo over a blurred
+   * copy of itself, "free" uses x / y / size (logos, small pictures). Missing = "free".
+   */
+  fill?: "cover" | "contain" | "free";
   animation: Animation;
 }
 

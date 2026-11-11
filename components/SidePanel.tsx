@@ -151,7 +151,7 @@ function MediaTab() {
                   }));
                 else if (a.kind === "image") {
                   const slot = nextPhotoSlot(store.get().project, t);
-                  A.addImage({ asset: a.id, start: slot.start, end: slot.end, size: 0.7, animation: "fade" });
+                  A.addImage({ asset: a.id, start: slot.start, end: slot.end, animation: "fade", fill: "cover" });
                   store.set({ toast: `Foto agregada: ${fmt(slot.start)}–${fmt(slot.end)}${slot.full ? " (ya no quedaba lugar libre, se superpone)" : ""}` });
                 }
                 else A.addMusic({ asset: a.id, start: t });

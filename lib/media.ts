@@ -260,7 +260,7 @@ export async function addFiles(files: FileList | File[], opts: { autoPlace?: boo
           ...p,
           overlays: [
             ...p.overlays,
-            { id: uid(), kind: "image", assetId: a.id, start: slot.start, end: slot.end, x: 0.5, y: 0.5, size: 0.7, animation: "fade" },
+            { id: uid(), kind: "image", assetId: a.id, start: slot.start, end: slot.end, x: 0.5, y: 0.5, size: 1, animation: "fade", fill: "cover" },
           ],
         }));
         placed.push(`🖼 ${a.name}: ${fmt(slot.start)}–${fmt(slot.end)}${slot.full ? " (ya no quedaba lugar libre, se superpone)" : ""}`);
