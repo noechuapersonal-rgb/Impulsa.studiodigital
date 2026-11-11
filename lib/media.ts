@@ -17,11 +17,12 @@ function kindOf(file: File): AssetKind | null {
   return null;
 }
 
-export async function probeFile(file: File, id?: string): Promise<Asset | null> {
-  const kind = kindOf(file);
+export async function probeFile(file: File, id?: string, forceKind?: AssetKind, name?: string): Promise<Asset | null> {
+  // forceKind "audio" lets a video file be used only for its sound
+  const kind = forceKind ?? kindOf(file);
   if (!kind) return null;
   const url = URL.createObjectURL(file);
-  const base = { id: id ?? uid(), kind, name: file.name, url, file, duration: 0 };
+  const base = { id: id ?? uid(), kind, name: name ?? file.name, url, file, duration: 0 };
   if (kind === "video" || kind === "audio") {
     const el = document.createElement(kind);
     el.preload = "metadata";
@@ -314,4 +315,54 @@ export async function imageThumb(asset: Asset, max = 384): Promise<string> {
   ctx.fillRect(0, 0, c.width, c.height);
   ctx.drawImage(img, 0, 0, c.width, c.height);
   return c.toDataURL("image/jpeg", 0.75).split(",")[1];
+}
+
+/**
+ * Uses the sound of a video (e.g. a saved Reel with a trending audio) as background music.
+ * `replace` mutes the original sound of the user's clips.
+ */
+export async function addVideoSound(file: File, opts: { replace: boolean }) {
+  const player = getPlayer();
+  store.set({ busy: `Extrayendo el sonido de ${file.name}…` });
+  try {
+    const a = await probeFile(file, undefined, "audio", `Sonido de ${file.name.replace(/\.[^.]+$/, "")}`);
+    if (!a) throw new Error("Ese archivo no es un video válido.");
+    try {
+      await player?.addAsset(a);
+    } catch {
+      throw new Error("No pudimos leer el sonido de ese video. Probá con otro archivo (MP4 o MOV).");
+    }
+    store.set((s) => ({ assets: [...s.assets, a] }));
+    idbPut(MEDIA, a.id, file).catch(() => undefined);
+    const dur = totalDuration(store.get().project);
+    store.edit((p) => ({
+      ...p,
+      clips: opts.replace ? p.clips.map((c) => ({ ...c, volume: 0 })) : p.clips,
+      audio: [
+        ...p.audio,
+        {
+          id: uid(),
+          kind: "music",
+          assetId: a.id,
+          name: a.name,
+          start: 0,
+          duration: dur > 0 ? dur : a.duration,
+          offset: 0,
+          volume: opts.replace ? 1 : 0.3,
+          fadeIn: opts.replace ? 0 : 1,
+          fadeOut: 1.5,
+          loop: true,
+        },
+      ],
+    }));
+    store.set({
+      toast: opts.replace
+        ? `Listo: ahora suena «${a.name}» y el sonido original de tu video quedó en silencio.`
+        : `Listo: «${a.name}» suena de fondo junto con el sonido de tu video.`,
+    });
+  } catch (e) {
+    alert((e as Error).message);
+  } finally {
+    store.set({ busy: null });
+  }
 }

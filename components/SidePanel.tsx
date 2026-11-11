@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as A from "@/lib/actions";
-import { addFiles, WHISPER_MODELS, transcribeTimeline } from "@/lib/media";
+import { addFiles, addVideoSound, WHISPER_MODELS, transcribeTimeline } from "@/lib/media";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { store, useEditor } from "@/lib/store";
@@ -77,6 +77,7 @@ export default function SidePanel({ mobile = false }: { mobile?: boolean }) {
 
 function MediaTab() {
   const assets = useEditor((s) => s.assets);
+  const [soundFor, setSoundFor] = useState<string | null>(null);
   const fit = useEditor((s) => s.project.fit);
   return (
     <div className="space-y-3">
@@ -158,6 +159,36 @@ function MediaTab() {
             >
               + Añadir
             </button>
+            {a.kind === "video" &&
+              (soundFor === a.id ? (
+                <div className="mx-1.5 mb-1.5 flex flex-col gap-1">
+                  <button
+                    className="rounded bg-[#0f0f18] py-1 text-[11px] font-semibold hover:bg-[var(--accent)]"
+                    onClick={() => {
+                      addVideoSound(a.file, { replace: true });
+                      setSoundFor(null);
+                    }}
+                  >
+                    🔇 Reemplazar el sonido
+                  </button>
+                  <button
+                    className="rounded bg-[#0f0f18] py-1 text-[11px] font-semibold hover:bg-[var(--accent)]"
+                    onClick={() => {
+                      addVideoSound(a.file, { replace: false });
+                      setSoundFor(null);
+                    }}
+                  >
+                    🎚 Mezclar de fondo
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="mx-1.5 mb-1.5 w-[calc(100%-12px)] rounded bg-[#0f0f18] py-1 text-[11px] font-semibold hover:bg-[var(--accent)]"
+                  onClick={() => setSoundFor(a.id)}
+                >
+                  ♪ Usar su sonido
+                </button>
+              ))}
           </div>
         ))}
       </div>

@@ -2,13 +2,13 @@
 
 import { useRef, useState } from "react";
 import * as A from "@/lib/actions";
-import { addFiles } from "@/lib/media";
+import { addFiles, addVideoSound } from "@/lib/media";
 import { fmt, nextSlot } from "@/lib/project";
 import { SFX_INFO } from "@/lib/sfx";
 import { store } from "@/lib/store";
 import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type TextPreset } from "@/lib/types";
 
-type Step = "main" | "text" | "sfx" | "fx";
+type Step = "main" | "text" | "sfx" | "fx" | "sound";
 
 const TEXTS: { preset: TextPreset; label: string; text: string; position: string }[] = [
   { preset: "titulo", label: "Título grande", text: "TU TÍTULO", position: "top" },
@@ -24,10 +24,13 @@ export default function AddMenu() {
   const video = useRef<HTMLInputElement>(null);
   const photo = useRef<HTMLInputElement>(null);
   const music = useRef<HTMLInputElement>(null);
+  const soundVideo = useRef<HTMLInputElement>(null);
+  const [soundFile, setSoundFile] = useState<File | null>(null);
 
   const close = () => {
     setOpen(false);
     setStep("main");
+    setSoundFile(null);
   };
   const notice = (what: string, s: { start: number; end: number; full: boolean }) =>
     store.set({
@@ -91,6 +94,20 @@ export default function AddMenu() {
       {fileInput(video, "video/*")}
       {fileInput(photo, "image/*")}
       {fileInput(music, "audio/*")}
+      <input
+        ref={soundVideo}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (f) {
+            setSoundFile(f);
+            setStep("sound");
+          }
+        }}
+      />
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 md:items-center" onClick={close}>
@@ -106,7 +123,15 @@ export default function AddMenu() {
                   </button>
                 )}
                 <h2 className="font-bold">
-                  {step === "main" ? "¿Qué querés agregar?" : step === "text" ? "Elegí un texto" : step === "sfx" ? "Elegí un sonido" : "Elegí un efecto"}
+                  {step === "main"
+                    ? "¿Qué querés agregar?"
+                    : step === "text"
+                      ? "Elegí un texto"
+                      : step === "sfx"
+                        ? "Elegí un sonido"
+                        : step === "sound"
+                          ? "¿Cómo usamos este sonido?"
+                          : "Elegí un efecto"}
                 </h2>
               </div>
               <button className="text-[var(--muted)] hover:text-white" onClick={close} aria-label="Cerrar">
@@ -121,6 +146,12 @@ export default function AddMenu() {
                   <Option icon="🖼" label="Foto" hint="Va después de la última foto, 3 s cada una" onClick={() => photo.current?.click()} />
                   <Option icon="T" label="Texto" hint="Va después del último texto" onClick={() => setStep("text")} />
                   <Option icon="♪" label="Música de fondo" hint="Suena durante todo el video" onClick={() => music.current?.click()} />
+                  <Option
+                    icon="🎵"
+                    label="Sonido de otro video"
+                    hint="Usá el audio de un Reel o TikTok guardado"
+                    onClick={() => soundVideo.current?.click()}
+                  />
                   <Option icon="🔊" label="Efecto de sonido" hint="Va después del último sonido" onClick={() => setStep("sfx")} />
                   <Option icon="✨" label="Efecto visual" hint="Zoom, flash, blanco y negro… (2 s)" onClick={() => setStep("fx")} />
                 </div>
@@ -148,6 +179,30 @@ export default function AddMenu() {
                     {SFX_INFO[n].label}
                   </button>
                 ))}
+              </div>
+            )}
+
+            {step === "sound" && soundFile && (
+              <div className="grid gap-2">
+                <p className="text-xs text-[var(--muted)]">🎵 {soundFile.name}</p>
+                <Option
+                  icon="🔇"
+                  label="Reemplazar el sonido de mi video"
+                  hint="Mi video queda en silencio y suena solo este audio"
+                  onClick={() => {
+                    addVideoSound(soundFile, { replace: true });
+                    close();
+                  }}
+                />
+                <Option
+                  icon="🎚"
+                  label="Mezclar con mi video"
+                  hint="Suena de fondo, más bajito, junto con mi voz"
+                  onClick={() => {
+                    addVideoSound(soundFile, { replace: false });
+                    close();
+                  }}
+                />
               </div>
             )}
 

@@ -156,7 +156,7 @@ export async function openProject(id: string): Promise<boolean> {
         continue;
       }
       const file = blob instanceof File ? blob : new File([blob], m.name, { type: m.type });
-      const a = await probeFile(file, m.id).catch(() => null);
+      const a = await probeFile(file, m.id, m.kind, m.name).catch(() => null);
       if (!a) {
         missing.push(m);
         continue;
@@ -186,7 +186,7 @@ export async function openProject(id: string): Promise<boolean> {
 
 /** Re-attaches a file chosen by the user to a missing asset of the open project. */
 export async function relinkAsset(m: AssetMeta, file: File) {
-  const a = await probeFile(file, m.id);
+  const a = await probeFile(file, m.id, m.kind, m.name);
   if (!a) throw new Error("Ese archivo no es un video, imagen o audio válido.");
   await getPlayer()?.addAsset(a);
   await idbPut(MEDIA, a.id, file).catch(() => undefined);
