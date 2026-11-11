@@ -180,7 +180,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
   }
 
   return (
-    <aside className="flex w-[360px] shrink-0 flex-col border-l border-[var(--line)] bg-[var(--panel)]">
+    <aside className="flex h-full w-full shrink-0 flex-col bg-[var(--panel)] md:h-auto md:w-[360px] md:border-l md:border-[var(--line)]">
       <div className="flex h-11 shrink-0 items-center gap-2 border-b border-[var(--line)] px-4">
         <span className="grad grid h-6 w-6 place-items-center rounded-md text-xs text-white">✨</span>
         <span className="font-bold">Asistente IA</span>
@@ -221,9 +221,13 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         <div ref={endRef} />
       </div>
       {hasVideo && items.length < 3 && (
-        <div className="flex flex-wrap gap-1.5 px-3 pb-2">
+        <div className="scroll-thin flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2 md:flex-wrap md:overflow-visible">
           {SUGGESTIONS.map((s) => (
-            <button key={s} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-left text-[11px] text-[var(--muted)] hover:border-[var(--accent)] hover:text-white" onClick={() => send(s)}>
+            <button
+              key={s}
+              className="shrink-0 rounded-full border border-[var(--line)] px-2.5 py-1 text-left text-[11px] whitespace-nowrap text-[var(--muted)] hover:border-[var(--accent)] hover:text-white md:shrink md:whitespace-normal"
+              onClick={() => send(s)}
+            >
               {s}
             </button>
           ))}

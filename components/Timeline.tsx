@@ -8,7 +8,8 @@ import type { Project, Selection } from "@/lib/types";
 import { EFFECT_LABELS } from "@/lib/types";
 
 type Kind = NonNullable<Selection>["kind"];
-const LABEL_W = 92;
+const LABEL_W_DESKTOP = 92;
+const LABEL_W_MOBILE = 64;
 
 interface Item {
   id: string;
@@ -19,12 +20,13 @@ interface Item {
   color: string;
 }
 
-export default function Timeline() {
+export default function Timeline({ mobile = false }: { mobile?: boolean }) {
+  const LABEL_W = mobile ? LABEL_W_MOBILE : LABEL_W_DESKTOP;
   const project = useEditor((s) => s.project);
   const assets = useEditor((s) => s.assets);
   const time = useEditor((s) => s.time);
   const selection = useEditor((s) => s.selection);
-  const [pps, setPps] = useState(40); // pixels per second
+  const [pps, setPps] = useState(mobile ? 24 : 40); // pixels per second
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const duration = Math.max(contentDuration(project), 10);
@@ -45,7 +47,7 @@ export default function Timeline() {
       })),
     },
     {
-      title: "Textos/Fotos",
+      title: mobile ? "Textos" : "Textos/Fotos",
       items: project.overlays.map((o) => ({
         id: o.id,
         kind: "overlay",
@@ -56,7 +58,7 @@ export default function Timeline() {
       })),
     },
     {
-      title: "Subtítulos",
+      title: mobile ? "Subs" : "Subtítulos",
       items: project.cues.map((c) => ({
         id: c.id,
         kind: "cue",
@@ -108,10 +110,17 @@ export default function Timeline() {
     window.addEventListener("pointerup", up);
   };
 
+  // on touch screens rows scroll natively; a tap moves the playhead
+  const rowDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "touch") return;
+    scrub(e);
+  };
+
   const startDrag = (e: React.PointerEvent, it: Item, mode: "move" | "resize") => {
     e.stopPropagation();
     store.set({ selection: { kind: it.kind, id: it.id } });
-    if (it.kind === "clip") return;
+    // with a finger, tapping selects (times are edited in "Editar"); dragging would fight scrolling
+    if (it.kind === "clip" || e.pointerType === "touch") return;
     const before = store.get().project;
     const x0 = e.clientX;
     const move = (ev: PointerEvent) => {
@@ -133,7 +142,7 @@ export default function Timeline() {
   for (let t = 0; t <= duration + 4; t += step) ticks.push(t);
 
   return (
-    <div className="flex h-[19rem] shrink-0 flex-col border-t border-[var(--line)] bg-[var(--panel)]">
+    <div className={`flex shrink-0 flex-col bg-[var(--panel)] ${mobile ? "h-full" : "h-[19rem] border-t border-[var(--line)]"}`}>
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-[var(--line)] px-3 text-xs">
         <span className="label">Línea de tiempo</span>
         <div className="flex-1" />
@@ -144,7 +153,7 @@ export default function Timeline() {
         <div style={{ width: width + LABEL_W }} className="relative min-h-full">
           <div className="sticky top-0 z-20 flex h-6 bg-[var(--panel)]">
             <div style={{ width: LABEL_W }} className="sticky left-0 z-10 shrink-0 bg-[var(--panel)]" />
-            <div className="relative flex-1 cursor-ew-resize border-b border-[var(--line)]" onPointerDown={scrub}>
+            <div className="relative flex-1 cursor-ew-resize border-b border-[var(--line)]" style={{ touchAction: "none" }} onPointerDown={scrub}>
               {ticks.map((t) => (
                 <div key={t} className="absolute top-0 h-full border-l border-[var(--line)] pl-1 text-[10px] text-[var(--muted)]" style={{ left: t * pps }}>
                   {Math.floor(t / 60)}:{String(t % 60).padStart(2, "0")}
@@ -160,7 +169,11 @@ export default function Timeline() {
               >
                 {row.title}
               </div>
-              <div className="relative flex-1" onPointerDown={scrub}>
+              <div
+                className="relative flex-1"
+                onPointerDown={rowDown}
+                onClick={(e) => mobile && getPlayer()?.seek(tFromEvent(e))}
+              >
                 {row.items.map((it) => {
                   const sel = selection?.id === it.id;
                   return (

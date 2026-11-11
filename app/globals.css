@@ -42,6 +42,7 @@ body {
   background: var(--panel-2);
   border: 1px solid var(--line);
   transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  white-space: nowrap;
 }
 .btn:hover:not(:disabled) {
   border-color: #3b3b55;
@@ -90,4 +91,16 @@ body {
 }
 input[type="range"] {
   accent-color: var(--accent);
+}
+
+/* phones: 16px inputs so iOS doesn't zoom in when typing; bigger touch targets */
+@media (max-width: 767px) {
+  .input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+  .btn {
+    min-height: 38px;
+  }
 }

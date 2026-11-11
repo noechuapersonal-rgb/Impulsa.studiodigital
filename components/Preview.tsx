@@ -130,7 +130,7 @@ export default function Preview() {
           ref={canvasRef}
           width={w}
           height={h}
-          style={{ width: w * scale, height: h * scale, visibility: empty ? "hidden" : "visible" }}
+          style={{ width: w * scale, height: h * scale, visibility: empty ? "hidden" : "visible", touchAction: "none" }}
           className={`rounded-md shadow-2xl ${picking ? "cursor-crosshair ring-2 ring-[var(--accent)]" : ""}`}
           onPointerDown={onDown}
           onPointerMove={onMove}
@@ -149,10 +149,13 @@ export default function Preview() {
           </div>
         )}
         {empty && (
-          <label className="absolute inset-6 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[var(--line)] text-center hover:border-[var(--accent)]">
-            <div className="grad grid h-14 w-14 place-items-center rounded-2xl text-2xl text-white">⬆</div>
-            <div className="text-lg font-bold">Arrastra aquí tus videos en crudo</div>
-            <div className="max-w-sm text-sm text-[var(--muted)]">
+          <label className="absolute inset-3 flex md:inset-6 cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[var(--line)] text-center hover:border-[var(--accent)]">
+            <div className="grad hidden h-14 w-14 place-items-center rounded-2xl text-2xl text-white sm:grid">⬆</div>
+            <div className="text-lg font-bold">
+              <span className="hidden md:inline">Arrastra aquí tus videos en crudo</span>
+              <span className="md:hidden">Subí tus videos en crudo</span>
+            </div>
+            <div className="hidden max-w-sm text-sm text-[var(--muted)] sm:block">
               También fotos (logos, imágenes) y música. Todo se procesa en tu navegador.
             </div>
             <span className="btn btn-primary mt-2">Elegir archivos</span>
@@ -177,7 +180,7 @@ export default function Preview() {
           </button>
         )}
       </div>
-      <div className="flex h-12 shrink-0 items-center gap-3 border-t border-[var(--line)] px-4">
+      <div className="flex h-12 shrink-0 items-center gap-3 border-t border-[var(--line)] px-3 md:px-4">
         <button className="btn" onClick={() => getPlayer()?.seek(0)} title="Inicio">
           ⏮
         </button>

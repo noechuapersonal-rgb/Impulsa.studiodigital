@@ -8,6 +8,7 @@ import { getPlayer } from "@/lib/player";
 import { splitClipAt } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 import type { Aspect, Fit } from "@/lib/types";
+import { useIsMobile } from "@/lib/useIsMobile";
 import Chat from "./Chat";
 import ExportButton from "./ExportButton";
 import Preview from "./Preview";
@@ -31,9 +32,21 @@ export default function Editor({ account }: { account?: EditorAccount }) {
   const canRedo = useEditor((s) => s.future.length > 0);
   const hasAssets = useEditor((s) => s.assets.length > 0);
   const [chatOpen, setChatOpen] = useState(true);
+  const isMobile = useIsMobile();
+  // phone layout: one panel at a time under the video
+  const [mTab, setMTab] = useState<"ia" | "tools" | "timeline">("ia");
+  const selection = useEditor((s) => s.selection);
+  const picking = useEditor((s) => !!s.eyedropper);
 
   useEffect(() => {
-    const open = () => setChatOpen(true);
+    if (selection) setMTab("tools");
+  }, [selection]);
+
+  useEffect(() => {
+    const open = () => {
+      setChatOpen(true);
+      setMTab("ia");
+    };
     window.addEventListener("impulsa-chat", open);
     return () => window.removeEventListener("impulsa-chat", open);
   }, []);
@@ -83,35 +96,35 @@ export default function Editor({ account }: { account?: EditorAccount }) {
   }, []);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
+    <div className="flex h-[100dvh] flex-col overflow-hidden">
       {account && <TrialWelcome account={account} />}
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-[var(--line)] px-4">
+      <header className="flex h-14 shrink-0 items-center gap-1.5 border-b border-[var(--line)] px-2 md:gap-3 md:px-4">
         <Link href="/" className="flex items-center gap-2 font-extrabold">
           <span className="grad grid h-7 w-7 place-items-center rounded-lg text-sm text-white">▶</span>
           <span className="hidden sm:inline">
             Impulsa <span className="grad-text">Studio</span>
           </span>
         </Link>
-        <div className="mx-2 h-6 w-px bg-[var(--line)]" />
-        <button className="btn" disabled={!canUndo} onClick={() => store.undo()} title="Deshacer (Ctrl+Z)">
+        <div className="mx-1 hidden h-6 w-px bg-[var(--line)] md:block" />
+        <button className="btn !px-2.5 md:!px-3" disabled={!canUndo} onClick={() => store.undo()} title="Deshacer (Ctrl+Z)">
           ↶
         </button>
-        <button className="btn" disabled={!canRedo} onClick={() => store.redo()} title="Rehacer (Ctrl+Shift+Z)">
+        <button className="btn !px-2.5 md:!px-3" disabled={!canRedo} onClick={() => store.redo()} title="Rehacer (Ctrl+Shift+Z)">
           ↷
         </button>
         <select
-          className="input !w-auto"
+          className="input !w-auto max-w-[96px] md:max-w-none"
           value={aspect}
           onChange={(e) => setFormat({ aspect: e.target.value as Aspect })}
           title="Formato"
         >
-          <option value="16:9">16:9 · YouTube</option>
-          <option value="9:16">9:16 · Reels/TikTok</option>
-          <option value="1:1">1:1 · Cuadrado</option>
-          <option value="4:5">4:5 · Feed</option>
+          <option value="16:9">{isMobile ? "16:9" : "16:9 · YouTube"}</option>
+          <option value="9:16">{isMobile ? "9:16" : "9:16 · Reels/TikTok"}</option>
+          <option value="1:1">{isMobile ? "1:1" : "1:1 · Cuadrado"}</option>
+          <option value="4:5">{isMobile ? "4:5" : "4:5 · Feed"}</option>
         </select>
         <select
-          className="input !w-auto"
+          className="input !hidden !w-auto md:!block"
           value={fit}
           onChange={(e) => setFormat({ fit: e.target.value as Fit })}
           title="Encuadre"
@@ -122,12 +135,12 @@ export default function Editor({ account }: { account?: EditorAccount }) {
         </select>
         <div className="flex-1" />
         {busy && (
-          <div className="flex items-center gap-2 truncate text-xs text-[var(--muted)]">
+          <div className="hidden items-center gap-2 truncate text-xs text-[var(--muted)] md:flex">
             <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
             <span className="truncate">{busy}</span>
           </div>
         )}
-        <button className="btn" onClick={() => setChatOpen((v) => !v)}>
+        <button className="btn !hidden md:!inline-flex" onClick={() => setChatOpen((v) => !v)}>
           ✨ <span className="hidden md:inline">Asistente IA</span>
         </button>
         <ExportButton disabled={!hasAssets} />
@@ -137,27 +150,70 @@ export default function Editor({ account }: { account?: EditorAccount }) {
             title="Ver cómo funciona la prueba"
             onClick={() => window.dispatchEvent(new Event("impulsa-welcome"))}
           >
-            🎁 Prueba: {account.trialDaysLeft} {account.trialDaysLeft === 1 ? "día" : "días"}
+            🎁<span className="hidden sm:inline"> Prueba:</span> {account.trialDaysLeft}
+            <span className="hidden sm:inline">{account.trialDaysLeft === 1 ? " día" : " días"}</span>
+            <span className="sm:hidden">d</span>
           </button>
         )}
         {account && (
-          <Link href="/cuenta" className="btn" title={account.email}>
+          <Link href="/cuenta" className="btn !px-2.5 md:!px-3" title={account.email}>
             👤 <span className="hidden xl:inline">Mi cuenta</span>
           </Link>
         )}
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <SidePanel />
-        <main className="flex min-w-0 flex-1 flex-col">
-          <Preview />
-          <Timeline />
-        </main>
-        {/* kept mounted when hidden so other panels can still send it messages */}
-        <div className={chatOpen ? "contents" : "hidden"}>
-          <Chat usage={account ? { used: account.used, limit: account.limit } : undefined} />
+      {busy && (
+        <div className="flex shrink-0 items-center gap-2 border-b border-[var(--line)] px-3 py-1.5 text-xs text-[var(--muted)] md:hidden">
+          <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+          <span className="truncate">{busy}</span>
         </div>
-      </div>
+      )}
+
+      {isMobile ? (
+        <>
+          <div className="flex min-h-0 flex-[1_1_42%] flex-col">
+            <Preview />
+          </div>
+          <div className={`min-h-0 flex-[1_1_58%] border-t border-[var(--line)] ${picking ? "pointer-events-none opacity-40" : ""}`}>
+            {/* the chat stays mounted so the conversation is kept when switching tabs */}
+            <div className={mTab === "ia" ? "flex h-full" : "hidden"}>
+              <Chat usage={account ? { used: account.used, limit: account.limit } : undefined} />
+            </div>
+            {mTab === "tools" && <SidePanel mobile />}
+            {mTab === "timeline" && <Timeline mobile />}
+          </div>
+          <nav className="grid shrink-0 grid-cols-3 border-t border-[var(--line)] bg-[var(--panel)] pb-[env(safe-area-inset-bottom)]">
+            {(
+              [
+                ["ia", "✨", "IA"],
+                ["tools", "🧰", "Editar"],
+                ["timeline", "🎞", "Línea de tiempo"],
+              ] as const
+            ).map(([id, icon, label]) => (
+              <button
+                key={id}
+                onClick={() => setMTab(id)}
+                className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${mTab === id ? "text-white" : "text-[var(--muted)]"}`}
+              >
+                <span className={`text-lg ${mTab === id ? "" : "opacity-70"}`}>{icon}</span>
+                {label}
+              </button>
+            ))}
+          </nav>
+        </>
+      ) : (
+        <div className="flex min-h-0 flex-1">
+          <SidePanel />
+          <main className="flex min-w-0 flex-1 flex-col">
+            <Preview />
+            <Timeline />
+          </main>
+          {/* kept mounted when hidden so other panels can still send it messages */}
+          <div className={chatOpen ? "contents" : "hidden"}>
+            <Chat usage={account ? { used: account.used, limit: account.limit } : undefined} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

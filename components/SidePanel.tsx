@@ -27,7 +27,7 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
-export default function SidePanel() {
+export default function SidePanel({ mobile = false }: { mobile?: boolean }) {
   const [tab, setTab] = useState<Tab>("media");
   const selection = useEditor((s) => s.selection);
   useEffect(() => {
@@ -35,20 +35,32 @@ export default function SidePanel() {
   }, [selection]);
 
   return (
-    <aside className="flex w-[340px] shrink-0 border-r border-[var(--line)] bg-[var(--panel)]">
-      <nav className="scroll-thin flex w-16 shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--line)] p-1.5">
+    <aside
+      className={
+        mobile
+          ? "flex h-full w-full flex-col bg-[var(--panel)]"
+          : "flex w-[340px] shrink-0 border-r border-[var(--line)] bg-[var(--panel)]"
+      }
+    >
+      <nav
+        className={
+          mobile
+            ? "scroll-thin flex shrink-0 gap-1 overflow-x-auto border-b border-[var(--line)] p-1.5"
+            : "scroll-thin flex w-16 shrink-0 flex-col gap-1 overflow-y-auto border-r border-[var(--line)] p-1.5"
+        }
+      >
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-semibold ${tab === t.id ? "bg-[var(--panel-2)] text-white" : "text-[var(--muted)] hover:text-white"}`}
+            className={`flex shrink-0 flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-semibold ${mobile ? "min-w-[68px] px-1" : ""} ${tab === t.id ? "bg-[var(--panel-2)] text-white" : "text-[var(--muted)] hover:text-white"}`}
           >
             <span className="text-base">{t.icon}</span>
             {t.label}
           </button>
         ))}
       </nav>
-      <div className="scroll-thin min-w-0 flex-1 overflow-y-auto p-3">
+      <div className={`scroll-thin min-w-0 flex-1 overflow-y-auto p-3 ${mobile ? "min-h-0 pb-6" : ""}`}>
         {tab === "media" && <MediaTab />}
         {tab === "subs" && <SubtitlesTab />}
         {tab === "text" && <TextTab />}
@@ -65,8 +77,17 @@ export default function SidePanel() {
 
 function MediaTab() {
   const assets = useEditor((s) => s.assets);
+  const fit = useEditor((s) => s.project.fit);
   return (
     <div className="space-y-3">
+      <label className="block space-y-1 md:hidden">
+        <span className="label block">Encuadre</span>
+        <select id="fit-mobile" className="input" value={fit} onChange={(e) => A.setFormat({ fit: e.target.value })}>
+          <option value="blur">Fondo desenfocado</option>
+          <option value="cover">Llenar (recortar)</option>
+          <option value="contain">Ajustar (bandas)</option>
+        </select>
+      </label>
       <label className="btn btn-primary w-full cursor-pointer justify-center">
         ⬆ Subir videos, fotos o música
         <input

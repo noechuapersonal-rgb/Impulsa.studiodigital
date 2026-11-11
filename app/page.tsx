@@ -22,7 +22,7 @@ export default function Home() {
           <Link href="/login" className="btn">
             Ingresar
           </Link>
-          <Link href="#precio" className="btn btn-primary">
+          <Link href="#precio" className="btn btn-primary !hidden sm:!inline-flex">
             Ver precio
           </Link>
         </div>
