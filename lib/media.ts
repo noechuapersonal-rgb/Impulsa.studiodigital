@@ -212,10 +212,20 @@ export async function transcribeAsset(
   }
 }
 
-/** Transcribe every video used on the timeline. */
-export async function transcribeTimeline(opts?: { language?: string | null; model?: string }) {
+/** Transcribe the audio used for subtitles: the voice of the clips and/or the background songs. */
+export async function transcribeTimeline(opts?: {
+  language?: string | null;
+  model?: string;
+  source?: "video" | "music" | "all";
+}) {
   const s = store.get();
-  const ids = Array.from(new Set(s.project.clips.map((c) => c.assetId)));
+  const source = opts?.source ?? "video";
+  const ids = new Set<string>();
+  if (source !== "music") s.project.clips.forEach((c) => ids.add(c.assetId));
+  if (source !== "video")
+    s.project.audio.forEach((a) => {
+      if (a.kind === "music" && a.assetId) ids.add(a.assetId);
+    });
   for (const id of ids) {
     const a = s.assets.find((x) => x.id === id);
     if (a) await transcribeAsset(a, opts);

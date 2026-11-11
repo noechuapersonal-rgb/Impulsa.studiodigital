@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as A from "@/lib/actions";
-import { addFiles, addVideoSound, WHISPER_MODELS, transcribeTimeline } from "@/lib/media";
+import { addFiles, addVideoSound, WHISPER_MODELS } from "@/lib/media";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { store, useEditor } from "@/lib/store";
@@ -203,13 +203,16 @@ function SubtitlesTab() {
   const busy = useEditor((s) => s.busy);
   const [lang, setLang] = useState("spanish");
   const [model, setModel] = useState<string>(WHISPER_MODELS.equilibrado);
+  const [source, setSource] = useState<"auto" | "video" | "music" | "all">("auto");
+  const hasSong = useEditor((s) => s.project.audio.some((a) => a.kind === "music" && !!a.assetId));
   const [err, setErr] = useState("");
 
   const generate = async () => {
     setErr("");
     try {
-      await transcribeTimeline({ language: lang || null, model });
-      await A.addSubtitles({ language: lang || null });
+      const src = source === "auto" ? undefined : source;
+      const n = await A.addSubtitles({ language: lang || null, model, source: src });
+      if (!n) setErr("No se escuchó voz ni letra para subtitular. Probá eligiendo otro audio o el modelo «Preciso».");
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -234,7 +237,33 @@ function SubtitlesTab() {
             <option value={WHISPER_MODELS.preciso}>Preciso</option>
           </select>
         </div>
-        <button className="btn btn-primary w-full justify-center" disabled={!hasClips || !!busy} onClick={generate}>
+        {hasSong && (
+          <label className="block space-y-1">
+            <span className="label block">¿De qué audio?</span>
+            <select
+              id="sub-source"
+              className="input"
+              value={source}
+              onChange={(e) => {
+                const v = e.target.value as typeof source;
+                setSource(v);
+                if (v === "music" || v === "all") setModel(WHISPER_MODELS.preciso);
+              }}
+            >
+              <option value="auto">Automático</option>
+              <option value="video">Voz del video</option>
+              <option value="music">Letra de la canción de fondo</option>
+              <option value="all">Ambos</option>
+            </select>
+            {(source === "music" || source === "all") && (
+              <span className="block text-[11px] text-[var(--muted)]">
+                Para canciones usamos el modelo «Preciso», que es más pesado: la primera vez tarda unos minutos en
+                descargarse. Revisá la letra: con música algunas palabras pueden salir mal.
+              </span>
+            )}
+          </label>
+        )}
+        <button className="btn btn-primary w-full justify-center" disabled={(!hasClips && !hasSong) || !!busy} onClick={generate}>
           🔤 Generar subtítulos
         </button>
         <p className="text-[11px] text-[var(--muted)]">

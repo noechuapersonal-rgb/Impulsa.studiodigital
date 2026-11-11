@@ -113,6 +113,8 @@ export interface SubtitleStyle {
   uppercase: boolean;
   background: boolean;
   wordsPerCue: number;
+  /** which audio the subtitles come from: the voice of the clips, the background song, or both */
+  source?: "video" | "music" | "all";
 }
 
 export const EFFECT_TYPES = [

@@ -2,11 +2,14 @@
 
 import { describeBrand } from "./brand";
 import { describeActiveRefs } from "./references";
-import { detectSilences, transcribeTimeline } from "./media";
+import { detectSilences, transcribeTimeline, WHISPER_MODELS } from "./media";
 import { getPlayer } from "./player";
 import {
   buildCues,
   clipStarts,
+  defaultSubSource,
+  musicItems,
+  type SubSource,
   fmt,
   keepOnlyRanges,
   positionToXY,
@@ -50,9 +53,11 @@ export function findAsset(name: unknown, kind: AssetKind): Asset | undefined {
   return all.length === 1 ? all[0] : undefined;
 }
 
-export async function ensureTranscripts(language?: string | null) {
-  await transcribeTimeline({ language });
+export async function ensureTranscripts(language?: string | null, source: SubSource = "video", model?: string) {
+  await transcribeTimeline({ language, source, model });
 }
+
+const assetDurations = () => Object.fromEntries(store.get().assets.map((a) => [a.id, a.duration]));
 
 export function transcriptForAI(): string {
   const s = store.get();
@@ -67,14 +72,38 @@ export function transcriptForAI(): string {
       lines.push(`[${(starts[i] + a - c.in).toFixed(2)}–${(starts[i] + b - c.in).toFixed(2)}] ${seg.text}`);
     }
   });
+  for (const m of musicItems(p)) {
+    const segs = s.transcripts[m.assetId!];
+    if (!segs?.length) continue;
+    lines.push(`Letra de la canción de fondo «${m.name}» (suena desde ${m.start.toFixed(2)}s):`);
+    for (const seg of segs) {
+      const a = m.start - m.offset + seg.start;
+      if (a < m.start || a >= m.start + m.duration) continue;
+      lines.push(`  [${a.toFixed(2)}–${(m.start - m.offset + seg.end).toFixed(2)}] ${seg.text}`);
+    }
+  }
   return lines.join("\n");
 }
 
-export async function addSubtitles(opts: Partial<SubtitleStyle> & { language?: string | null } = {}) {
-  await ensureTranscripts(opts.language);
-  const s = store.get();
-  const style = mergeStyle(s.project.subtitleStyle, opts);
-  const cues = buildCues(s.project, s.transcripts, style.wordsPerCue);
+export async function addSubtitles(
+  opts: Partial<SubtitleStyle> & { language?: string | null; model?: string } = {},
+) {
+  const project = store.get().project;
+  let source: SubSource = opts.source ?? defaultSubSource(project);
+  // songs are harder to understand than speech: use the most accurate speech model for them
+  const modelFor = (src: SubSource) => opts.model ?? (src === "video" ? undefined : WHISPER_MODELS.preciso);
+  await ensureTranscripts(opts.language, source, modelFor(source));
+  let s = store.get();
+  let style = mergeStyle(s.project.subtitleStyle, opts);
+  let cues = buildCues(s.project, s.transcripts, style.wordsPerCue, source, assetDurations());
+  // nothing spoken in the clips but there is a song: subtitle the song
+  if (!cues.length && source === "video" && musicItems(s.project).length && !opts.source) {
+    source = "music";
+    await ensureTranscripts(opts.language, source, modelFor(source));
+    s = store.get();
+    cues = buildCues(s.project, s.transcripts, style.wordsPerCue, source, assetDurations());
+  }
+  style = { ...style, source };
   store.edit((p) => ({ ...p, cues, subtitleStyle: style }));
   return cues.length;
 }
@@ -100,7 +129,7 @@ export function styleSubtitles(o: Partial<SubtitleStyle>) {
   store.edit((p) => ({
     ...p,
     subtitleStyle: style,
-    cues: regroup ? buildCues(p, s.transcripts, style.wordsPerCue) : p.cues,
+    cues: regroup ? buildCues(p, s.transcripts, style.wordsPerCue, style.source ?? "video", assetDurations()) : p.cues,
   }));
 }
 

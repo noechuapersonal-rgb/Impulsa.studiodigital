@@ -2,6 +2,7 @@
 
 import * as A from "./actions";
 import { applyBrand } from "./brand";
+import { WHISPER_MODELS } from "./media";
 import { getPlayer } from "./player";
 import { totalDuration } from "./project";
 import { store } from "./store";
@@ -41,10 +42,14 @@ export function storyboardTimes(): number[] {
 export async function executeTool(name: string, input: Input): Promise<ToolOutput> {
   switch (name) {
     case "get_transcript": {
-      if (!store.get().project.clips.length) return "No hay videos en la línea de tiempo.";
-      await A.ensureTranscripts();
+      const p = store.get().project;
+      const songs = p.audio.some((a) => a.kind === "music" && a.assetId);
+      if (!p.clips.length && !songs) return "No hay videos ni música en el proyecto.";
+      if (p.clips.length) await A.ensureTranscripts(undefined, "video");
+      // background songs too, with the most accurate model (lyrics are hard to understand)
+      if (songs) await A.ensureTranscripts(undefined, "music", WHISPER_MODELS.preciso);
       const t = A.transcriptForAI();
-      return t || "No se detectó voz en los videos.";
+      return t || "No se detectó voz ni letra en el audio.";
     }
     case "add_subtitles": {
       const n = await A.addSubtitles(input as Parameters<typeof A.addSubtitles>[0]);

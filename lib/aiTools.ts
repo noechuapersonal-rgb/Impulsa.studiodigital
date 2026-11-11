@@ -42,17 +42,23 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "get_transcript",
     description:
-      "Transcribe (si hace falta) el audio de los videos de la línea de tiempo y devuelve el texto hablado con marcas de tiempo de la línea de tiempo. Úsalo antes de decidir cortes por contenido, colocar elementos en momentos concretos de lo que se dice, o elegir los mejores momentos. Tarda un poco la primera vez.",
+      "Transcribe (si hace falta) la voz de los videos y la letra de la música de fondo, y devuelve el texto con marcas de tiempo de la línea de tiempo. Úsalo antes de decidir cortes por contenido, colocar elementos en momentos concretos de lo que se dice, o elegir los mejores momentos. Tarda un poco la primera vez.",
     input_schema: { type: "object", properties: {} },
   },
   {
     name: "add_subtitles",
     description:
-      "Genera subtítulos automáticos a partir de la voz del video (reemplaza los existentes) y aplica un estilo. Transcribe automáticamente si hace falta.",
+      "Genera subtítulos automáticos (reemplaza los existentes) y aplica un estilo. Transcribe automáticamente si hace falta. Puede subtitular la voz de los videos o la letra de la canción de fondo: nunca le pidas la letra al cliente, transcríbela con source 'music'.",
     input_schema: {
       type: "object",
       properties: {
         ...subtitleStyleProps,
+        source: {
+          type: "string",
+          enum: ["video", "music", "all"],
+          description:
+            "video: la voz de los clips. music: la letra de la canción de fondo. all: ambos. Si no se indica: la canción cuando el video está en silencio, si no la voz.",
+        },
         language: {
           type: "string",
           description: "Idioma hablado en inglés para Whisper, ej. 'spanish', 'english', 'portuguese'. Por defecto 'spanish'.",
