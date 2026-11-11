@@ -57,6 +57,9 @@ export async function ensureTranscripts(language?: string | null, source: SubSou
   await transcribeTimeline({ language, source, model });
 }
 
+export const isPhone = () =>
+  typeof navigator !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+
 const assetDurations = () => Object.fromEntries(store.get().assets.map((a) => [a.id, a.duration]));
 
 export function transcriptForAI(): string {
@@ -91,7 +94,9 @@ export async function addSubtitles(
   const project = store.get().project;
   let source: SubSource = opts.source ?? defaultSubSource(project);
   // songs are harder to understand than speech: use the most accurate speech model for them
-  const modelFor = (src: SubSource) => opts.model ?? (src === "video" ? undefined : WHISPER_MODELS.preciso);
+  // (on phones the biggest model can run out of memory, so they use the balanced one)
+  const modelFor = (src: SubSource) =>
+    opts.model ?? (src === "video" ? undefined : isPhone() ? WHISPER_MODELS.equilibrado : WHISPER_MODELS.preciso);
   await ensureTranscripts(opts.language, source, modelFor(source));
   let s = store.get();
   let style = mergeStyle(s.project.subtitleStyle, opts);

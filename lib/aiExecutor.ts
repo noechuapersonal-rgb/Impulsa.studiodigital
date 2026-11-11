@@ -47,7 +47,7 @@ export async function executeTool(name: string, input: Input): Promise<ToolOutpu
       if (!p.clips.length && !songs) return "No hay videos ni música en el proyecto.";
       if (p.clips.length) await A.ensureTranscripts(undefined, "video");
       // background songs too, with the most accurate model (lyrics are hard to understand)
-      if (songs) await A.ensureTranscripts(undefined, "music", WHISPER_MODELS.preciso);
+      if (songs) await A.ensureTranscripts(undefined, "music", A.isPhone() ? WHISPER_MODELS.equilibrado : WHISPER_MODELS.preciso);
       const t = A.transcriptForAI();
       return t || "No se detectó voz ni letra en el audio.";
     }

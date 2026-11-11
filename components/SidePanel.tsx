@@ -247,7 +247,7 @@ function SubtitlesTab() {
               onChange={(e) => {
                 const v = e.target.value as typeof source;
                 setSource(v);
-                if (v === "music" || v === "all") setModel(WHISPER_MODELS.preciso);
+                if ((v === "music" || v === "all") && !A.isPhone()) setModel(WHISPER_MODELS.preciso);
               }}
             >
               <option value="auto">Automático</option>
@@ -257,8 +257,8 @@ function SubtitlesTab() {
             </select>
             {(source === "music" || source === "all") && (
               <span className="block text-[11px] text-[var(--muted)]">
-                Para canciones usamos el modelo «Preciso», que es más pesado: la primera vez tarda unos minutos en
-                descargarse. Revisá la letra: con música algunas palabras pueden salir mal.
+                Con música algunas palabras pueden salir mal: revisá la letra. En la compu conviene el modelo
+                «Preciso» (más pesado, la primera vez tarda unos minutos en descargarse).
               </span>
             )}
           </label>
