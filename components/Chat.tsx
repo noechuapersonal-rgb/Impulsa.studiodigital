@@ -12,8 +12,10 @@ type Msg = Anthropic.Beta.BetaMessageParam;
 type Block = Anthropic.Beta.BetaContentBlock;
 
 interface UiItem {
-  role: "user" | "assistant" | "action" | "error";
+  role: "user" | "assistant" | "action" | "error" | "feedback";
   text: string;
+  /** feedback items: what was asked, what the AI answered and did */
+  fb?: { instruction: string; reply: string; actions: string[] };
 }
 
 const SUGGESTIONS = [
@@ -92,6 +94,8 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
     getPlayer()?.pause();
     const snapshot = history.current.length;
     const undoMark = store.get().past.length;
+    const replyParts: string[] = [];
+    const actionsDone: string[] = [];
 
     try {
       if (process.env.NEXT_PUBLIC_DEMO === "1")
@@ -146,7 +150,11 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         const blocks: Block[] = data.content;
         history.current.push({ role: "assistant", content: blocks as Anthropic.Beta.BetaContentBlockParam[] });
 
-        for (const b of blocks) if (b.type === "text" && b.text.trim()) push({ role: "assistant", text: b.text.trim() });
+        for (const b of blocks)
+          if (b.type === "text" && b.text.trim()) {
+            push({ role: "assistant", text: b.text.trim() });
+            replyParts.push(b.text.trim());
+          }
 
         const uses = blocks.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
         if (data.stop_reason !== "tool_use" || !uses.length) {
@@ -157,6 +165,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         const results: Anthropic.Beta.BetaToolResultBlockParam[] = [];
         for (const u of uses) {
           push({ role: "action", text: TOOL_LABELS[u.name] ?? u.name });
+          actionsDone.push(TOOL_LABELS[u.name] ?? u.name);
           try {
             const input = u.input && typeof u.input === "object" ? (u.input as Record<string, unknown>) : {};
             const out = await executeTool(u.name, input);
@@ -176,6 +185,8 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
       setWorking(false);
       const changes = store.get().past.length - undoMark;
       if (changes > 0) push({ role: "action", text: `✓ ${changes} cambio${changes > 1 ? "s" : ""} aplicado${changes > 1 ? "s" : ""} — puedes deshacerlos con ↶` });
+      if (replyParts.length || actionsDone.length)
+        push({ role: "feedback", text: "", fb: { instruction: text, reply: replyParts.join("\n\n"), actions: actionsDone } });
     }
   }
 
@@ -196,7 +207,9 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
       <div className="scroll-thin min-h-0 flex-1 space-y-2.5 overflow-y-auto p-3">
         {items.map((m, i) => (
           <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
-            {m.role === "action" ? (
+            {m.role === "feedback" && m.fb ? (
+              <Feedback fb={m.fb} />
+            ) : m.role === "action" ? (
               <div className="flex items-center gap-2 px-1 text-xs text-[var(--muted)]">
                 <span className="text-[var(--accent)]">●</span> {m.text}
               </div>
@@ -284,5 +297,74 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         </div>
       </form>
     </aside>
+  );
+}
+
+/** 👍 / 👎 under an answer; a 👎 asks what went wrong. Saved for the admin panel. */
+function Feedback({ fb }: { fb: NonNullable<UiItem["fb"]> }) {
+  const [rating, setRating] = useState<1 | -1 | null>(null);
+  const [comment, setComment] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const send = async (r: 1 | -1, c = "") => {
+    setSent(true);
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating: r, comment: c, ...fb }),
+      });
+    } catch {
+      /* best effort */
+    }
+  };
+
+  if (sent)
+    return <div className="px-1 text-[11px] text-[var(--muted)]">¡Gracias! Tu opinión nos ayuda a mejorar la IA. 💜</div>;
+
+  if (rating === -1)
+    return (
+      <div className="space-y-1.5 rounded-xl border border-[var(--line)] p-2.5">
+        <p className="text-xs font-semibold">¿Qué salió mal o qué esperabas?</p>
+        <textarea
+          className="input !text-[13px]"
+          rows={2}
+          autoFocus
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Ej: el título tapó la cara / no entendió que quería música más alta"
+        />
+        <div className="flex gap-2">
+          <button className="btn btn-primary !py-1 text-xs" onClick={() => send(-1, comment)}>
+            Enviar
+          </button>
+          <button className="btn !py-1 text-xs" onClick={() => send(-1)}>
+            Enviar sin comentario
+          </button>
+        </div>
+      </div>
+    );
+
+  return (
+    <div className="flex items-center gap-1.5 px-1 text-[11px] text-[var(--muted)]">
+      ¿Te sirvió?
+      <button
+        className="rounded-md border border-[var(--line)] px-2 py-0.5 hover:border-emerald-400"
+        aria-label="Me sirvió"
+        onClick={() => {
+          setRating(1);
+          send(1);
+        }}
+      >
+        👍
+      </button>
+      <button
+        className="rounded-md border border-[var(--line)] px-2 py-0.5 hover:border-red-400"
+        aria-label="No me sirvió"
+        onClick={() => setRating(-1)}
+      >
+        👎
+      </button>
+    </div>
   );
 }

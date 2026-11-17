@@ -84,3 +84,14 @@ Después ve a **Deployments → … → Redeploy** para que tome los cambios.
 - **Claude (la IA)**: con el modelo Haiku, cada instrucción cuesta una fracción de centavo de dólar; con el
   límite de 200 instrucciones por cliente por mes, un cliente que use todo su límite te cuesta como máximo unos 2 dólares al mes (medio centavo a 1 centavo por instrucción).
 - **Mercado Pago**: cobra su comisión habitual por cada pago recibido.
+
+## Entrenar a la IA
+
+En `/admin` tienes dos herramientas:
+
+- **🧠 Reglas de la IA:** escribe cómo quieres que edite (ej. "subtítulos de máximo 3 palabras, en mayúsculas").
+  La IA las sigue desde el siguiente pedido, para todos los usuarios.
+- **💬 Opiniones sobre la IA:** lo que los usuarios marcan con 👍 / 👎 debajo de cada respuesta del chat.
+  Usa los 👎 para descubrir qué reglas agregar.
+
+(Necesitan las tablas `app_settings` y `ai_feedback` de `supabase/schema.sql`.)

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { currentPeriod, getAccount, isAdminEmail, STATUS_LABELS, trialEndsAt } from "@/lib/account";
 import { accountsEnabled, config, formatPrice } from "@/lib/config";
+import { getAiRules, saveAiRules } from "@/lib/aiRules";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 export const metadata = { title: "Administración — Impulsa Studio" };
@@ -26,18 +27,43 @@ async function setManual(formData: FormData) {
   revalidatePath("/admin");
 }
 
-export default async function AdminPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+async function saveRules(formData: FormData) {
+  "use server";
+  await requireAdmin();
+  await saveAiRules(String(formData.get("rules") ?? ""));
+  revalidatePath("/admin");
+  redirect("/admin?guardado=1#reglas");
+}
+
+const RULES_EXAMPLE = `Ejemplos (borralos y escribí los tuyos):
+- El gancho tiene que aparecer en el primer segundo y medio.
+- Subtítulos de máximo 3 palabras por línea, en mayúsculas.
+- En videos de producto, mostrar precio y llamado a la acción en los últimos 3 segundos.
+- No usar el efecto glitch nunca.`;
+
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; guardado?: string; opiniones?: string }>;
+}) {
   await connection();
   if (!accountsEnabled()) redirect("/editor");
   await requireAdmin();
-  const { q = "" } = await searchParams;
+  const { q = "", guardado, opiniones } = await searchParams;
+  const onlyBad = opiniones === "malas";
 
   const admin = supabaseAdmin();
-  const [{ data: list }, { data: subs }, { data: usage }] = await Promise.all([
+  let fbQuery = admin.from("ai_feedback").select("*").order("created_at", { ascending: false }).limit(100);
+  if (onlyBad) fbQuery = fbQuery.eq("rating", -1);
+  const [{ data: list }, { data: subs }, { data: usage }, rules, { data: feedback, error: fbError }] = await Promise.all([
     admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
     admin.from("subscriptions").select("*"),
     admin.from("ai_usage").select("user_id, count").eq("period", currentPeriod()),
+    getAiRules(),
+    fbQuery,
   ]);
+  const good = (feedback ?? []).filter((f) => f.rating === 1).length;
+  const bad = (feedback ?? []).filter((f) => f.rating === -1).length;
   const subBy = new Map((subs ?? []).map((s) => [s.user_id as string, s]));
   const useBy = new Map((usage ?? []).map((u) => [u.user_id as string, u.count as number]));
 
@@ -130,6 +156,89 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         “Dar acceso” sirve para quien te pagó por otro medio o para regalar acceso. Las suscripciones de Mercado Pago se
         activan y desactivan solas.
       </p>
+
+      <section id="reglas" className="mt-10">
+        <h2 className="text-xl font-bold">🧠 Reglas de la IA</h2>
+        <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
+          Escribí cómo querés que edite la IA, como se lo explicarías a un editor nuevo. Las sigue desde el próximo pedido,
+          para todos los usuarios. Si un cliente pide algo distinto, gana lo que pide el cliente.
+        </p>
+        {guardado && <p className="mt-2 text-sm text-emerald-300">✓ Reglas guardadas. La IA ya las está usando.</p>}
+        <form action={saveRules} className="mt-3 space-y-2">
+          <textarea
+            id="rules"
+            name="rules"
+            defaultValue={rules}
+            rows={10}
+            className="input font-mono !text-[13px]"
+            placeholder={RULES_EXAMPLE}
+          />
+          <button className="btn btn-primary">Guardar reglas</button>
+        </form>
+      </section>
+
+      <section id="opiniones" className="mt-10">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-bold">💬 Opiniones sobre la IA</h2>
+            <p className="mt-1 text-sm text-[var(--muted)]">
+              Lo que marcaron los usuarios con 👍 / 👎. Usá los 👎 para descubrir qué reglas agregar arriba.
+            </p>
+          </div>
+          <div className="flex gap-2 text-sm">
+            <Link href="/admin#opiniones" className={`btn !py-1 ${onlyBad ? "" : "btn-primary"}`}>
+              Todas
+            </Link>
+            <Link href="/admin?opiniones=malas#opiniones" className={`btn !py-1 ${onlyBad ? "btn-primary" : ""}`}>
+              Solo 👎
+            </Link>
+          </div>
+        </div>
+        {fbError ? (
+          <p className="mt-3 text-sm text-amber-300">
+            Falta crear la tabla de opiniones en Supabase (ver CONFIGURACION.md / supabase/schema.sql).
+          </p>
+        ) : (
+          <>
+            {!onlyBad && (feedback?.length ?? 0) > 0 && (
+              <p className="mt-3 text-sm">
+                Últimas {feedback?.length}: <b>👍 {good}</b> · <b>👎 {bad}</b>
+              </p>
+            )}
+            <div className="mt-3 space-y-2">
+              {(feedback ?? []).map((f) => (
+                <div key={f.id} className="panel rounded-xl p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted)]">
+                    <span>
+                      {f.rating === 1 ? "👍" : "👎"} {f.email}
+                    </span>
+                    <span>{new Date(f.created_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })}</span>
+                  </div>
+                  {f.comment && <p className="mt-1.5 font-semibold">“{f.comment}”</p>}
+                  {f.instruction && (
+                    <p className="mt-1.5">
+                      <span className="text-[var(--muted)]">Pidió: </span>
+                      {f.instruction}
+                    </p>
+                  )}
+                  {f.actions && (
+                    <p className="mt-1 text-xs text-[var(--muted)]">
+                      Hizo: {f.actions}
+                    </p>
+                  )}
+                  {f.reply && (
+                    <details className="mt-1 text-xs text-[var(--muted)]">
+                      <summary className="cursor-pointer">Respuesta de la IA</summary>
+                      <p className="mt-1 whitespace-pre-wrap">{f.reply}</p>
+                    </details>
+                  )}
+                </div>
+              ))}
+              {!feedback?.length && <p className="text-sm text-[var(--muted)]">Todavía no hay opiniones.</p>}
+            </div>
+          </>
+        )}
+      </section>
     </main>
   );
 }

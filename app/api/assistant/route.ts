@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { guardAi } from "@/lib/aiGuard";
+import { getAiRules } from "@/lib/aiRules";
 import { AI_TOOLS, SYSTEM_PROMPT } from "@/lib/aiTools";
 
 export const runtime = "nodejs";
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
   if (guard instanceof Response) return guard;
   const usage = guard.usage;
 
+  const rules = await getAiRules();
   client ??= new Anthropic();
   try {
     const stream = client.beta.messages.stream({
@@ -39,7 +41,15 @@ export async function POST(req: Request) {
       max_tokens: 32000,
       // a bit more thinking gives noticeably better editing judgment at a small extra cost
       output_config: { effort: "high" },
-      system: SYSTEM_PROMPT,
+      system: rules
+        ? [
+            { type: "text", text: SYSTEM_PROMPT },
+            {
+              type: "text",
+              text: `## Reglas del estudio\nReglas de edición definidas por el equipo de Impulsa Studio. Tienen prioridad sobre el criterio general de arriba (pero nunca sobre lo que el cliente pide explícitamente):\n${rules}`,
+            },
+          ]
+        : SYSTEM_PROMPT,
       // eager streaming: inputs are small but arrive sooner; the browser validates them
       tools: AI_TOOLS.map((t) => ({ ...t, eager_input_streaming: true })),
       cache_control: { type: "ephemeral" },

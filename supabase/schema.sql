@@ -72,3 +72,26 @@ alter table public.projects enable row level security;
 drop policy if exists "ver mis proyectos" on public.projects;
 create policy "ver mis proyectos" on public.projects
   for select using (auth.uid() = user_id);
+
+-- Ajustes generales (por ejemplo las reglas de la IA que edita el administrador desde /admin)
+create table if not exists public.app_settings (
+  key text primary key,
+  value text not null default '',
+  updated_at timestamptz not null default now()
+);
+alter table public.app_settings enable row level security;
+
+-- Opiniones de los usuarios sobre las respuestas de la IA (👍 / 👎)
+create table if not exists public.ai_feedback (
+  id bigint generated always as identity primary key,
+  user_id uuid references auth.users (id) on delete set null,
+  email text,
+  rating smallint not null,
+  comment text,
+  instruction text,
+  reply text,
+  actions text,
+  created_at timestamptz not null default now()
+);
+create index if not exists ai_feedback_created_idx on public.ai_feedback (created_at desc);
+alter table public.ai_feedback enable row level security;
