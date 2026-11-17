@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type Anthropic from "@anthropic-ai/sdk";
 import { describeProject } from "@/lib/actions";
 import { executeTool, framesForAI, storyboardTimes } from "@/lib/aiExecutor";
-import { imageThumb } from "@/lib/media";
+import { addFiles, imageThumb } from "@/lib/media";
 import { getPlayer } from "@/lib/player";
 import { store, useEditor } from "@/lib/store";
 
@@ -67,7 +67,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
   const history = useRef<Msg[]>([]);
   const sentImages = useRef(new Set<string>());
   const endRef = useRef<HTMLDivElement>(null);
-  const hasVideo = useEditor((s) => s.project.clips.length > 0);
+  const hasVideo = useEditor((s) => s.project.clips.length > 0 || s.assets.length > 0);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -185,8 +185,11 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         <span className="grad grid h-6 w-6 place-items-center rounded-md text-xs text-white">✨</span>
         <span className="font-bold">Asistente IA</span>
         {usage && (
-          <span className="ml-auto text-[11px] text-[var(--muted)] tabular-nums" title="Instrucciones a la IA usadas este mes">
-            {usage.used}/{usage.limit} este mes
+          <span
+            className={`ml-auto text-[11px] tabular-nums ${usage.limit - usage.used <= 0 ? "text-amber-300" : "text-[var(--muted)]"}`}
+            title="Cada pedido a la IA usa 1 crédito"
+          >
+            Créditos restantes: {Math.max(0, usage.limit - usage.used)} de {usage.limit}
           </span>
         )}
       </div>
@@ -220,6 +223,27 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         )}
         <div ref={endRef} />
       </div>
+      {!hasVideo && (
+        <div className="mx-3 mb-2 rounded-xl border border-[var(--accent)]/40 bg-[var(--accent)]/10 p-3 text-sm">
+          <p className="font-semibold">👋 Primero subí un video</p>
+          <p className="mt-0.5 text-[13px] text-[var(--muted)]">
+            Así la IA puede verlo y editarlo. Después pedile lo que quieras: subtítulos, cortes, música, efectos…
+          </p>
+          <label className="btn btn-primary mt-2 cursor-pointer">
+            ⬆ Subir video
+            <input
+              type="file"
+              multiple
+              accept="video/*,image/*,audio/*"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.length) addFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        </div>
+      )}
       {hasVideo && items.length < 3 && (
         <div className="scroll-thin flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2 md:flex-wrap md:overflow-visible">
           {SUGGESTIONS.map((s) => (
@@ -244,7 +268,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
           <textarea
             className="input min-h-[44px] resize-none"
             rows={2}
-            placeholder={hasVideo ? "Ej: pon subtítulos amarillos y quita los silencios" : "Primero sube un video…"}
+            placeholder={hasVideo ? "Ej: poné subtítulos amarillos y sacá los silencios" : "Primero subí un video (botón de arriba)"}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {

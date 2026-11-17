@@ -114,9 +114,13 @@ function MediaTab() {
           onClick={async () => {
             try {
               const r = await A.removeSilences();
-              alert(`Se eliminaron ${r.removed.toFixed(1)}s de silencio en ${r.cuts} cortes.`);
+              store.set({
+                toast: r.cuts
+                  ? `✂ Se quitaron ${r.cuts} ${r.cuts === 1 ? "silencio" : "silencios"} (${r.removed.toFixed(1)} s). El video ahora dura ${fmt(r.duration)}. Podés deshacerlo con ↶.`
+                  : "No se encontraron silencios largos para quitar. Tu video ya está ajustado.",
+              });
             } catch (e) {
-              alert((e as Error).message);
+              store.set({ toast: `No se pudieron analizar los silencios: ${(e as Error).message}` });
             }
           }}
         >
@@ -201,7 +205,7 @@ function SubtitlesTab() {
   const cues = useEditor((s) => s.project.cues);
   const hasClips = useEditor((s) => s.project.clips.length > 0);
   const busy = useEditor((s) => s.busy);
-  const [lang, setLang] = useState("spanish");
+  const [lang, setLang] = useState("");
   const [model, setModel] = useState<string>(WHISPER_MODELS.equilibrado);
   const [source, setSource] = useState<"auto" | "video" | "music" | "all">("auto");
   const hasSong = useEditor((s) => s.project.audio.some((a) => a.kind === "music" && !!a.assetId));
@@ -224,12 +228,12 @@ function SubtitlesTab() {
         <div className="label">Generar automáticamente</div>
         <div className="grid grid-cols-2 gap-2">
           <select className="input" value={lang} onChange={(e) => setLang(e.target.value)}>
+            <option value="">Detectar idioma</option>
             <option value="spanish">Español</option>
             <option value="english">Inglés</option>
             <option value="portuguese">Portugués</option>
             <option value="french">Francés</option>
             <option value="italian">Italiano</option>
-            <option value="">Detectar</option>
           </select>
           <select className="input" value={model} onChange={(e) => setModel(e.target.value)}>
             <option value={WHISPER_MODELS.rapido}>Rápido</option>

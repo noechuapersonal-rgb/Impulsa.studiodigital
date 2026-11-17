@@ -177,12 +177,18 @@ export const WHISPER_MODELS = {
   preciso: "Xenova/whisper-small",
 } as const;
 
+/** Language each transcript was made with ("auto" = detected). */
+const transcriptLang = new Map<string, string>();
+
 export async function transcribeAsset(
   asset: Asset,
   opts: { language?: string | null; model?: string } = {},
 ): Promise<Segment[]> {
+  // reuse the transcript unless a different language is asked for explicitly
+  const langKey = opts.language === undefined ? undefined : (opts.language ?? "auto");
   const existing = store.get().transcripts[asset.id];
-  if (existing) return existing;
+  if (existing && (langKey === undefined || transcriptLang.get(asset.id) === langKey || !transcriptLang.has(asset.id) && langKey === "auto"))
+    return existing;
   store.set({ busy: `Extrayendo audio de "${asset.name}"…` });
   try {
     const audio = await mono16k(asset);
@@ -199,12 +205,14 @@ export async function transcribeAsset(
         {
           id,
           audio: copy,
-          language: opts.language === undefined ? "spanish" : opts.language,
+          // null = let Whisper detect the language
+          language: opts.language ?? null,
           model: opts.model ?? WHISPER_MODELS.equilibrado,
         },
         [copy.buffer],
       );
     });
+    transcriptLang.set(asset.id, langKey ?? "auto");
     store.set((s) => ({ transcripts: { ...s.transcripts, [asset.id]: segs } }));
     return segs;
   } finally {
@@ -303,7 +311,7 @@ export async function addFiles(files: FileList | File[], opts: { autoPlace?: boo
         placed.push(`♪ ${a.name}: de fondo desde ${fmt(start)}`);
       }
     } catch (e) {
-      alert((e as Error).message);
+      store.set({ toast: (e as Error).message });
     } finally {
       store.set({ busy: null });
     }
@@ -371,7 +379,7 @@ export async function addVideoSound(file: File, opts: { replace: boolean }) {
         : `Listo: «${a.name}» suena de fondo junto con el sonido de tu video.`,
     });
   } catch (e) {
-    alert((e as Error).message);
+    store.set({ toast: (e as Error).message });
   } finally {
     store.set({ busy: null });
   }

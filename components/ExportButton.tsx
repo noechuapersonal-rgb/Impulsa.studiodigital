@@ -4,9 +4,15 @@ import { useState } from "react";
 import { exportFileName } from "@/lib/actions";
 import { getPlayer } from "@/lib/player";
 import { totalDuration } from "@/lib/project";
-import { store } from "@/lib/store";
+import { store, useEditor } from "@/lib/store";
 
 type Result = { url: string; name: string; file: File };
+
+/** 75.4 → "1:15" */
+const mmss = (sec: number) => {
+  const t = Math.max(0, Math.round(sec));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`;
+};
 
 /** True when the phone can open its share sheet with a video file (save to gallery, WhatsApp, Instagram…). */
 function canShareFile(file: File) {
@@ -21,8 +27,11 @@ export default function ExportButton({ disabled }: { disabled: boolean }) {
   const [progress, setProgress] = useState<number | null>(null);
   const [result, setResult] = useState<Result | null>(null);
   const [note, setNote] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const videoLength = useEditor((st) => totalDuration(st.project));
 
   const run = async () => {
+    setConfirming(false);
     const p = getPlayer();
     if (!p || !totalDuration(store.get().project)) return;
     setResult(null);
@@ -43,7 +52,7 @@ export default function ExportButton({ disabled }: { disabled: boolean }) {
       const file = new File([blob], name, { type });
       setResult({ url: URL.createObjectURL(file), name, file });
     } catch (e) {
-      alert(`No se pudo exportar: ${(e as Error).message}`);
+      store.set({ toast: `No se pudo exportar: ${(e as Error).message}` });
     } finally {
       lock?.release().catch(() => undefined);
       setProgress(null);
@@ -65,9 +74,29 @@ export default function ExportButton({ disabled }: { disabled: boolean }) {
 
   return (
     <>
-      <button className="btn btn-primary" disabled={disabled || progress !== null} onClick={run}>
+      <button className="btn btn-primary" disabled={disabled || progress !== null} onClick={() => setConfirming(true)}>
         ⬇<span className="hidden sm:inline"> Exportar</span>
       </button>
+      {confirming && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 p-4" onClick={() => setConfirming(false)}>
+          <div className="panel w-full max-w-sm rounded-2xl p-5" onClick={(e) => e.stopPropagation()}>
+            <div className="text-lg font-bold">Exportar video</div>
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Tu video dura <b className="text-[var(--text)]">{mmss(videoLength)}</b>. Exportarlo tarda{" "}
+              <b className="text-[var(--text)]">aproximadamente {mmss(videoLength + 2)}</b>, porque se arma en tiempo real.
+            </p>
+            <p className="mt-2 text-sm text-[var(--muted)]">Dejá esta pantalla abierta y no bloquees el celular hasta que termine.</p>
+            <div className="mt-4 flex gap-2">
+              <button className="btn btn-primary flex-1 justify-center !py-2.5" onClick={run}>
+                ⬇ Exportar ahora
+              </button>
+              <button className="btn" onClick={() => setConfirming(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {(progress !== null || result) && (
         <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/70 p-4">
           <div className="panel w-full max-w-md rounded-2xl p-5 md:p-6">
@@ -75,14 +104,15 @@ export default function ExportButton({ disabled }: { disabled: boolean }) {
               <>
                 <div className="text-lg font-bold">Exportando tu video…</div>
                 <p className="mt-1 text-sm text-[var(--muted)]">
-                  Se arma en tiempo real (un video de 30 s tarda unos 30 s). Dejá esta pantalla abierta y no bloquees el
-                  celular.
+                  Dejá esta pantalla abierta y no bloquees el celular hasta que termine.
                 </p>
                 <div className="mt-4 h-2 overflow-hidden rounded-full bg-[var(--panel-2)]">
                   <div className="grad h-full transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
                 </div>
                 <div className="mt-2 flex justify-between text-sm">
-                  <span>{Math.round(progress * 100)}%</span>
+                  <span className="tabular-nums">
+                    {Math.round(progress * 100)}% · faltan {mmss(Math.max(0, videoLength * (1 - progress)) + 1)}
+                  </span>
                   <button className="text-[var(--muted)] hover:text-white" onClick={() => getPlayer()?.cancelExport()}>
                     Detener
                   </button>

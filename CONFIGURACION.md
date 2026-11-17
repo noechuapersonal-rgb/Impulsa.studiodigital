@@ -62,6 +62,8 @@ En tu proyecto de Vercel: **Settings → Environment Variables**. Agrega cada un
 | `AI_MONTHLY_LIMIT` | Instrucciones a la IA por cliente por mes (ej. `200`) |
 | `TRIAL_DAYS` | Días de prueba gratis desde que se registran (por defecto `3`; `0` = sin prueba) |
 | `TRIAL_AI_LIMIT` | Créditos de IA durante la prueba (por defecto `20`) |
+| `NEXT_PUBLIC_SUPPORT_WHATSAPP` | Tu WhatsApp de soporte con código de país, sin + ni espacios (ej. `5491123456789`); aparece en «❓ Ayuda» |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | Opcional: mail de soporte que aparece en «❓ Ayuda» |
 | `ADMIN_EMAILS` | Tu mail (para entrar al panel `/admin`). Varios, separados por coma |
 | `NEXT_PUBLIC_SITE_URL` | La dirección de tu web (ej. `https://impulsa-studiodigital.vercel.app`) |
 

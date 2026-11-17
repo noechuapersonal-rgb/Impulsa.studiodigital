@@ -12,6 +12,7 @@ import type { Aspect, Fit } from "@/lib/types";
 import { useIsMobile } from "@/lib/useIsMobile";
 import Chat from "./Chat";
 import ExportButton from "./ExportButton";
+import HelpButton from "./HelpButton";
 import MissingFiles from "./MissingFiles";
 import Toast from "./Toast";
 import Preview from "./Preview";
@@ -28,6 +29,18 @@ export interface EditorAccount {
 }
 
 const DEFAULT_NAME = "Proyecto sin título";
+
+/** "IMG_20261026_234652.jpg" → "Video del 17 de noviembre"; real names like "promo verano.mp4" are kept. */
+function friendlyName(file: string) {
+  const base = file.replace(/\.[^.]+$/, "").replace(/\.(mp4|mov)$/i, "").trim();
+  const cameraLike =
+    /^(img|vid|pxl|mov|dsc|dji|gopr|screen|screenshot|screenrecorder|grabaci|whatsapp|signal|telegram)[\W_]/i.test(base) ||
+    /^video[\W_]*\d/i.test(base) ||
+    /\d{6,}/.test(base.replace(/\D/g, "").length >= 8 ? base : "");
+  if (!cameraLike && base.length >= 3) return base.slice(0, 60);
+  const today = new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long" });
+  return `Video del ${today}`;
+}
 
 export default function Editor({ account, projectId }: { account?: EditorAccount; projectId?: string }) {
   const busy = useEditor((s) => s.busy);
@@ -68,7 +81,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
         if (!ok) {
           store.set({ projectId: null, saveState: "idle" });
           window.history.replaceState(null, "", "/editor");
-          alert("No encontramos ese proyecto. Empezamos uno nuevo.");
+          store.set({ toast: "No encontramos ese proyecto. Empezamos uno nuevo." });
         }
       });
     }
@@ -97,7 +110,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
         const st = store.get();
         if (st.projectName === DEFAULT_NAME) {
           const first = st.assets.find((a) => a.kind === "video") ?? st.assets[0];
-          if (first) store.set({ projectName: first.name.replace(/\.[^.]+$/, "").slice(0, 60) });
+          if (first) store.set({ projectName: friendlyName(first.name) });
         }
         const isNew = !store.get().projectId;
         try {
@@ -247,6 +260,9 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
             <span className="sm:hidden">d</span>
           </button>
         )}
+        <span className="hidden md:contents">
+          <HelpButton />
+        </span>
         {account && (
           <Link href="/cuenta" className="btn !px-2.5 md:!px-3" title={account.email}>
             👤 <span className="hidden xl:inline">Mi cuenta</span>
@@ -264,6 +280,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
           onChange={(e) => store.set({ projectName: e.target.value || DEFAULT_NAME })}
         />
         <span className={`shrink-0 text-[11px] ${saveState === "error" ? "text-red-300" : "text-[var(--muted)]"}`}>{saveLabel}</span>
+        <HelpButton compact />
       </div>
       {busy && (
         <div className="flex shrink-0 items-center gap-2 border-b border-[var(--line)] px-3 py-1.5 text-xs text-[var(--muted)] md:hidden">

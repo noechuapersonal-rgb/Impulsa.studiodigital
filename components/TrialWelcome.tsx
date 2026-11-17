@@ -44,7 +44,10 @@ export default function TrialWelcome({ account }: { account: EditorAccount }) {
 
         <div className="mt-5 space-y-3 text-sm">
           <div className="rounded-xl bg-[var(--panel-2)] p-3">
-            <div className="font-bold">✨ {left} créditos de IA para probar</div>
+            <div className="font-bold">
+              ✨ {account.limit} créditos de IA para probar
+              {account.used > 0 && <span className="font-normal text-[var(--muted)]"> · te quedan {left}</span>}
+            </div>
             <p className="mt-1 text-[var(--muted)]">
               Cada crédito es un pedido a la IA: una instrucción en el chat (por ejemplo &quot;poné subtítulos y quitá los
               silencios&quot;), un texto para publicar o el análisis de un Reel de referencia.

@@ -61,7 +61,7 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
         },
         language: {
           type: "string",
-          description: "Idioma hablado en inglés para Whisper, ej. 'spanish', 'english', 'portuguese'. Por defecto 'spanish'.",
+          description: "Idioma hablado, en inglés para Whisper: 'spanish', 'english', 'portuguese'… Omítelo para detectarlo automáticamente (recomendado).",
         },
       },
     },

@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import Link from "next/link";
+import HelpButton from "@/components/HelpButton";
 import { redirect } from "next/navigation";
 import { daysLeft, getAccount, STATUS_LABELS } from "@/lib/account";
 import { accountsEnabled, config, formatPrice } from "@/lib/config";
@@ -31,7 +32,9 @@ export default async function CuentaPage({
     }
   }
 
-  const pct = Math.min(100, Math.round((account.used / Math.max(1, account.limit)) * 100));
+  const remaining = Math.max(0, account.limit - account.used);
+  // the bar shows what is LEFT, so a full bar means plenty of credits
+  const pct = Math.min(100, Math.round((remaining / Math.max(1, account.limit)) * 100));
   const trialDays = daysLeft(account.trialEndsAt);
   const trialEnded = !account.active && !!account.trialEndsAt;
   const statusLabel = account.isAdmin
@@ -86,15 +89,18 @@ export default async function CuentaPage({
           <div className="mt-5 space-y-4">
             <div>
               <div className="flex justify-between text-sm">
-                <span>{account.onTrial ? "Créditos de IA de la prueba" : "Créditos de IA usados este mes"}</span>
+                <span>{account.onTrial ? "Créditos de IA de la prueba" : "Créditos de IA de este mes"}</span>
                 <span className="tabular-nums">
-                  {account.used} / {account.limit}
+                  Créditos restantes: {remaining} de {account.limit}
                 </span>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--panel-2)]">
                 <div className="grad h-full" style={{ width: `${pct}%` }} />
               </div>
-              <p className="mt-1 text-xs text-[var(--muted)]">El contador vuelve a cero el día 1 de cada mes.</p>
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Cada pedido a la IA usa 1 crédito.{" "}
+                {account.onTrial ? "Al suscribirte tenés más créditos cada mes." : "Los créditos se renuevan el día 1 de cada mes."}
+              </p>
             </div>
             {account.onTrial && (
               <div className="rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-4 text-sm">
@@ -147,6 +153,10 @@ export default async function CuentaPage({
           </div>
         )}
       </section>
+
+      <div className="mt-4 flex justify-center">
+        <HelpButton compact />
+      </div>
 
       {account.isAdmin && (
         <Link href="/admin" className="btn mt-4 w-full justify-center">
