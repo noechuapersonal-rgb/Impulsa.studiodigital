@@ -30,8 +30,14 @@ async function setManual(formData: FormData) {
 async function saveRules(formData: FormData) {
   "use server";
   await requireAdmin();
-  await saveAiRules(String(formData.get("rules") ?? ""));
+  let failed = "";
+  try {
+    await saveAiRules(String(formData.get("rules") ?? ""));
+  } catch (e) {
+    failed = e instanceof Error ? e.message : String(e);
+  }
   revalidatePath("/admin");
+  if (failed) redirect(`/admin?error_reglas=${encodeURIComponent(failed.slice(0, 300))}#reglas`);
   redirect("/admin?guardado=1#reglas");
 }
 
@@ -44,12 +50,12 @@ const RULES_EXAMPLE = `Ejemplos (borralos y escribí los tuyos):
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; guardado?: string; opiniones?: string }>;
+  searchParams: Promise<{ q?: string; guardado?: string; opiniones?: string; error_reglas?: string }>;
 }) {
   await connection();
   if (!accountsEnabled()) redirect("/editor");
   await requireAdmin();
-  const { q = "", guardado, opiniones } = await searchParams;
+  const { q = "", guardado, opiniones, error_reglas } = await searchParams;
   const onlyBad = opiniones === "malas";
 
   const admin = supabaseAdmin();
@@ -163,6 +169,19 @@ export default async function AdminPage({
           Escribí cómo querés que edite la IA, como se lo explicarías a un editor nuevo. Las sigue desde el próximo pedido,
           para todos los usuarios. Si un cliente pide algo distinto, gana lo que pide el cliente.
         </p>
+        {error_reglas && (
+          <div className="mt-2 rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-200">
+            <p className="font-semibold">No se pudieron guardar las reglas.</p>
+            {/app_settings|relation|schema cache|does not exist/i.test(error_reglas) ? (
+              <p className="mt-1">
+                Falta crear la tabla en Supabase: abrí SQL Editor → New query, pegá el contenido de
+                supabase/schema.sql (o el bloque de app_settings) y apretá Run. Después volvé a guardar.
+              </p>
+            ) : (
+              <p className="mt-1">Detalle: {error_reglas}</p>
+            )}
+          </div>
+        )}
         {guardado && <p className="mt-2 text-sm text-emerald-300">✓ Reglas guardadas. La IA ya las está usando.</p>}
         <form action={saveRules} className="mt-3 space-y-2">
           <textarea
