@@ -5,6 +5,7 @@ import * as A from "@/lib/actions";
 import { addFiles, addVideoSound, WHISPER_MODELS } from "@/lib/media";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
+import { BRAND_FONTS } from "@/lib/brand";
 import { store, useEditor } from "@/lib/store";
 import { narrateSubtitles, narrateText, voiceInfo, type OriginalAudio, type VoiceInfo } from "@/lib/tts";
 import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type SfxName, type SubtitlePreset } from "@/lib/types";
@@ -281,6 +282,7 @@ function SubtitlesTab() {
 
       <div className="space-y-2">
         <div className="label">Estilo</div>
+        <VideoFontSelect />
         <div className="grid grid-cols-3 gap-1.5">
           {(Object.keys(SUBTITLE_PRESETS) as SubtitlePreset[]).map((p) => (
             <button
@@ -359,6 +361,43 @@ const TEXT_PRESETS = [
   { preset: "etiqueta", label: "Etiqueta", text: "NUEVO" },
   { preset: "cta", label: "Llamada a la acción", text: "¡Sígueme!" },
 ];
+
+/** Typography of every text and subtitle of this video. */
+function VideoFontSelect() {
+  const font = useEditor((s) => s.project.font ?? "");
+  const extra = useEditor((s) => s.brand?.fonts ?? []);
+  return (
+    <Field label="Tipografía (textos y subtítulos)">
+      <select
+        id="video-font"
+        className="input"
+        value={font}
+        onChange={(e) => store.edit((p) => ({ ...p, font: e.target.value || undefined }))}
+      >
+        <option value="">Predeterminada (Inter)</option>
+        {extra.length > 0 && (
+          <optgroup label="Tus tipografías">
+            {extra.map((f) => (
+              <option key={f.name} value={f.name}>
+                {f.name}
+              </option>
+            ))}
+          </optgroup>
+        )}
+        <optgroup label="Recomendadas">
+          {BRAND_FONTS.map((f) => (
+            <option key={f.name} value={f.name}>
+              {f.name} — {f.style}
+            </option>
+          ))}
+        </optgroup>
+      </select>
+      <span className="mt-1 block text-[10px] text-[var(--muted)]">
+        Para subir tu propia letra o buscarla desde una foto, andá a 🎨 Marca.
+      </span>
+    </Field>
+  );
+}
 
 function VoiceSection() {
   const hasCues = useEditor((s) => s.project.cues.length > 0);

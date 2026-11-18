@@ -197,6 +197,14 @@ export interface BrandKit {
   hashtags: string;
   /** Reels the user likes, analyzed by the AI so it can imitate their style */
   references?: StyleRef[];
+  /** extra fonts: uploaded files (data URL) or Google Fonts found from a photo */
+  fonts?: CustomFont[];
+}
+
+export interface CustomFont {
+  name: string;
+  source: "file" | "google";
+  data?: string; // data URL of the font file (source "file")
 }
 
 export interface StyleRef {

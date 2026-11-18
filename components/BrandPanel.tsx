@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { applyBrand, BRAND_FONTS, emptyBrand, loadFont, logoToDataUrl, saveBrand } from "@/lib/brand";
+import { applyBrand, emptyBrand, logoToDataUrl, saveBrand } from "@/lib/brand";
 import { store, useEditor } from "@/lib/store";
 import type { BrandKit } from "@/lib/types";
 import ColorField from "./ColorField";
 import Field from "./Field";
+import FontPicker from "./FontPicker";
 
 export default function BrandPanel() {
   const saved = useEditor((s) => s.brand);
@@ -17,9 +18,6 @@ export default function BrandPanel() {
   useEffect(() => {
     if (saved) setB(saved);
   }, [saved]);
-  useEffect(() => {
-    loadFont(b.font);
-  }, [b.font]);
 
   const set = (patch: Partial<BrandKit>) => {
     setB((x) => ({ ...x, ...patch }));
@@ -101,15 +99,7 @@ export default function BrandPanel() {
         <p className="text-[10px] text-[var(--muted)]">Ideal: PNG con fondo transparente.</p>
       </div>
 
-      <Field label="Tipografía">
-        <select id="brand-font" className="input" value={b.font} onChange={(e) => set({ font: e.target.value })}>
-          {BRAND_FONTS.map((f) => (
-            <option key={f.name} value={f.name}>
-              {f.name} — {f.style}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <FontPicker font={b.font} fonts={b.fonts ?? []} onChange={(patch) => set(patch)} />
       <div
         className="rounded-lg border border-[var(--line)] p-3 text-center"
         style={{ fontFamily: `"${b.font}", sans-serif`, background: b.secondary, color: b.text }}

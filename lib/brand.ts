@@ -3,7 +3,7 @@
 import { addFiles } from "./media";
 import { totalDuration, uid } from "./project";
 import { store } from "./store";
-import type { BrandKit } from "./types";
+import type { BrandKit, CustomFont } from "./types";
 
 /** Google Fonts offered for the brand (weights that each family really has). */
 export const BRAND_FONTS: { name: string; weights: string; style: string }[] = [
@@ -24,29 +24,116 @@ export const BRAND_FONTS: { name: string; weights: string; style: string }[] = [
   { name: "Caveat", weights: "400;700", style: "Escrita a mano" },
 ];
 
-const loaded = new Map<string, Promise<void>>();
+const loaded = new Map<string, Promise<boolean>>();
 
-/** Loads a Google Font so both the page and the canvas can use it. */
-export function loadFont(name: string): Promise<void> {
-  if (!name || name === "Inter") return Promise.resolve();
-  let p = loaded.get(name);
-  if (!p) {
-    const f = BRAND_FONTS.find((x) => x.name === name);
+function googleCss(href: string): Promise<boolean> {
+  return new Promise((res) => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name).replace(/%20/g, "+")}:wght@${f?.weights ?? "400;700"}&display=swap`;
+    link.href = href;
+    link.onload = () => res(true);
+    link.onerror = () => {
+      link.remove();
+      res(false);
+    };
     document.head.appendChild(link);
-    p = new Promise<void>((res) => {
-      link.onload = () => {
-        Promise.all([document.fonts.load(`400 40px "${name}"`), document.fonts.load(`900 40px "${name}"`)])
-          .catch(() => undefined)
-          .then(() => res());
-      };
-      link.onerror = () => res();
-    });
+  });
+}
+
+/**
+ * Loads a font so both the page and the canvas can use it: one of the brand's uploaded files, or any
+ * Google Font by name. Resolves to false when the font could not be loaded.
+ */
+export function loadFont(name: string, extra: CustomFont[] = store.get().brand?.fonts ?? []): Promise<boolean> {
+  if (!name || name === "Inter") return Promise.resolve(true);
+  let p = loaded.get(name);
+  if (!p) {
+    const custom = extra.find((f) => f.name === name && f.source === "file" && f.data);
+    if (custom) {
+      // one file = one weight: declare it for every weight so bold texts don't get a fake bold
+      const face = new FontFace(name, `url(${custom.data})`, { weight: "100 900" });
+      p = face
+        .load()
+        .then((f) => {
+          document.fonts.add(f);
+          return true;
+        })
+        .catch(() => false);
+    } else {
+      const f = BRAND_FONTS.find((x) => x.name === name);
+      const fam = encodeURIComponent(name).replace(/%20/g, "+");
+      p = (async () => {
+        // ask for the weights we use; fonts that only have one weight need the plain request
+        const ok =
+          (await googleCss(`https://fonts.googleapis.com/css2?family=${fam}:wght@${f?.weights ?? "400;700;900"}&display=swap`)) ||
+          (await googleCss(`https://fonts.googleapis.com/css2?family=${fam}:wght@400;700&display=swap`)) ||
+          (await googleCss(`https://fonts.googleapis.com/css2?family=${fam}&display=swap`));
+        if (!ok) return false;
+        await Promise.all([document.fonts.load(`400 40px "${name}"`), document.fonts.load(`900 40px "${name}"`)]).catch(
+          () => undefined,
+        );
+        return document.fonts.check(`40px "${name}"`);
+      })();
+    }
     loaded.set(name, p);
+    p.then((ok) => {
+      if (!ok) loaded.delete(name);
+    });
   }
   return p;
+}
+
+const FONT_EXT = /\.(ttf|otf|woff2?)$/i;
+export const MAX_FONT_BYTES = 800_000;
+export const MAX_FONT_FILES = 3;
+
+/** Reads an uploaded font file; returns the font to add to the brand (name taken from the file). */
+export async function fontFromFile(file: File): Promise<CustomFont> {
+  if (!FONT_EXT.test(file.name)) throw new Error("Ese archivo no es una tipografía. Usá un archivo .ttf, .otf, .woff o .woff2.");
+  if (file.size > MAX_FONT_BYTES)
+    throw new Error("La tipografía pesa más de 800 KB. Probá con la versión .woff2 o con un solo estilo (por ejemplo Bold).");
+  const name =
+    file.name
+      .replace(FONT_EXT, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/[^\p{L}\p{N} ]/gu, "")
+      .trim()
+      .slice(0, 40) || "Mi tipografía";
+  const data = await new Promise<string>((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result));
+    r.onerror = () => rej(new Error("No se pudo leer el archivo."));
+    r.readAsDataURL(file);
+  });
+  // make sure the browser can actually use it
+  try {
+    await new FontFace(`check-${Date.now()}`, `url(${data})`).load();
+  } catch {
+    throw new Error("No pudimos leer esa tipografía. Probá con otro formato (.ttf u .otf suelen funcionar).");
+  }
+  return { name, source: "file", data };
+}
+
+/** Shrinks a photo of a typography to a JPEG (base64, no prefix) for the AI. */
+export async function photoForAI(file: File, max = 1200): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(img.naturalWidth * s));
+    c.height = Math.max(1, Math.round(img.naturalHeight * s));
+    const ctx = c.getContext("2d")!;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.85).split(",")[1];
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function emptyBrand(): BrandKit {
@@ -145,7 +232,7 @@ export async function applyBrand(
   brand: BrandKit,
   opts: { logo?: boolean; logoPosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right" } = {},
 ) {
-  await loadFont(brand.font);
+  await loadFont(brand.font, brand.fonts ?? []);
   const logoId = opts.logo === false ? null : await ensureLogoAsset(brand);
   const pos = opts.logoPosition ?? "top-right";
   const xy = {

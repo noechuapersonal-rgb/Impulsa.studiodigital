@@ -145,9 +145,16 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
     loadBrand().then((brand) => {
       if (!brand) return;
       store.set({ brand });
-      loadFont(brand.font);
+      loadFont(brand.font, brand.fonts ?? []);
     });
   }, []);
+
+  // the video's typography (also when opening a saved project); re-render once it is ready
+  const projectFont = useEditor((s) => s.project.font);
+  const brandFonts = useEditor((s) => s.brand?.fonts);
+  useEffect(() => {
+    if (projectFont) loadFont(projectFont, brandFonts ?? []).then(() => getPlayer()?.seek(store.get().time));
+  }, [projectFont, brandFonts]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

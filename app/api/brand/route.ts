@@ -22,7 +22,8 @@ export async function PUT(req: Request) {
   const account = await getAccount();
   if (!account) return Response.json({ error: "Sin sesión" }, { status: 401 });
   const raw = await req.text();
-  if (raw.length > 1_500_000) return Response.json({ error: "El logo es demasiado grande" }, { status: 413 });
+  if (raw.length > 4_400_000)
+    return Response.json({ error: "La marca pesa demasiado (logo o tipografías muy grandes)" }, { status: 413 });
   let brand: unknown;
   try {
     brand = JSON.parse(raw).brand;
