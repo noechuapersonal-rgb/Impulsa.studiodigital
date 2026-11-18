@@ -498,7 +498,9 @@ function TextTab() {
             className="btn w-full justify-between"
             onClick={() => {
               const t = store.get().time;
-              const id = A.addText({ text: text || p.text, preset: p.preset, font, start: t, end: t + 3, position: p.preset === "cta" ? "bottom" : "center" });
+                            // titles and calls to action use the brand's title typography unless another one is chosen
+              const titleFont = p.preset === "titulo" || p.preset === "cta" ? store.get().brand?.titleFont : undefined;
+              const id = A.addText({ text: text || p.text, preset: p.preset, font: font || titleFont, start: t, end: t + 3, position: p.preset === "cta" ? "bottom" : "center" });
               store.set({ selection: { kind: "overlay", id } });
             }}
           >

@@ -233,6 +233,7 @@ export async function applyBrand(
   opts: { logo?: boolean; logoPosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right" } = {},
 ) {
   await loadFont(brand.font, brand.fonts ?? []);
+  if (brand.titleFont) await loadFont(brand.titleFont, brand.fonts ?? []);
   const logoId = opts.logo === false ? null : await ensureLogoAsset(brand);
   const pos = opts.logoPosition ?? "top-right";
   const xy = {
@@ -243,7 +244,12 @@ export async function applyBrand(
   }[pos];
   store.edit((p) => {
     const dur = Math.max(totalDuration(p), 1);
-    const overlays = p.overlays.filter((o) => !(o.kind === "image" && o.assetId === logoId));
+    const overlays = p.overlays
+      .filter((o) => !(o.kind === "image" && o.assetId === logoId))
+      // titles and calls to action take the brand's title typography
+      .map((o) =>
+        o.kind === "text" && brand.titleFont && (o.preset === "titulo" || o.preset === "cta") ? { ...o, font: brand.titleFont } : o,
+      );
     if (logoId)
       overlays.push({
         id: uid(),
@@ -273,7 +279,7 @@ export function describeBrand(b: BrandKit | null): string {
     `Kit de marca: "${b.name}"`,
     b.description && `  Qué hace / público: ${b.description}`,
     b.tone && `  Tono: ${b.tone}`,
-    `  Tipografía: ${b.font}. Colores: principal ${b.primary}, secundario ${b.secondary}, texto ${b.text}.`,
+    `  Tipografía: ${b.font}${b.titleFont && b.titleFont !== b.font ? ` (títulos y llamados a la acción: ${b.titleFont}; úsala en el campo font de esos textos)` : ""}. Colores: principal ${b.primary}, secundario ${b.secondary}, texto ${b.text}.`,
     `  Logo: ${b.logo ? "sí (usa apply_brand para ponerlo)" : "no cargado"}`,
     b.whatsapp && `  WhatsApp: ${b.whatsapp}`,
     b.instagram && `  Instagram: ${b.instagram}`,

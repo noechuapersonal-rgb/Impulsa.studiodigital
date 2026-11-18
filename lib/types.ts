@@ -199,6 +199,8 @@ export interface BrandKit {
   hashtags: string;
   /** Reels the user likes, analyzed by the AI so it can imitate their style */
   references?: StyleRef[];
+  /** typography for titles (and calls to action); missing = the same as `font` */
+  titleFont?: string;
   /** extra fonts: uploaded files (data URL) or Google Fonts found from a photo */
   fonts?: CustomFont[];
 }

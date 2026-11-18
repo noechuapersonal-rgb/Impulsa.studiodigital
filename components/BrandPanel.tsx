@@ -99,12 +99,14 @@ export default function BrandPanel() {
         <p className="text-[10px] text-[var(--muted)]">Ideal: PNG con fondo transparente.</p>
       </div>
 
-      <FontPicker font={b.font} fonts={b.fonts ?? []} onChange={(patch) => set(patch)} />
+      <FontPicker font={b.font} titleFont={b.titleFont} fonts={b.fonts ?? []} onChange={(patch) => set(patch)} />
       <div
         className="rounded-lg border border-[var(--line)] p-3 text-center"
         style={{ fontFamily: `"${b.font}", sans-serif`, background: b.secondary, color: b.text }}
       >
-        <div className="text-xl font-black">{b.name || "Tu marca"}</div>
+        <div className="text-xl font-black" style={b.titleFont ? { fontFamily: `"${b.titleFont}", sans-serif` } : undefined}>
+          {b.name || "Tu marca"}
+        </div>
         <span className="mt-1 inline-block rounded-full px-3 py-0.5 text-sm font-bold" style={{ background: b.primary, color: b.text }}>
           ¡Nueva colección!
         </span>
