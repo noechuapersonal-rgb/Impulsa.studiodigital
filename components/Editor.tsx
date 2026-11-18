@@ -168,6 +168,8 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
         deleteSelection();
       } else if (e.key.toLowerCase() === "s" && !mod) {
         store.edit((p) => splitClipAt(p, store.get().time));
+      } else if (e.key.toLowerCase() === "f" && !mod) {
+        window.dispatchEvent(new Event("impulsa-fullscreen"));
       } else if (e.key === "ArrowLeft") {
         getPlayer()?.seek(store.get().time - (e.shiftKey ? 1 : 1 / 30));
       } else if (e.key === "ArrowRight") {

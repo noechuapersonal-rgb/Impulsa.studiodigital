@@ -29,6 +29,34 @@ export default function Preview() {
     return () => window.removeEventListener("keydown", esc);
   }, [picking]);
   const [box, setBox] = useState({ w: 0, h: 0 });
+
+  // big preview: real fullscreen when the browser allows it, otherwise the preview fills the window
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [big, setBig] = useState(false);
+  const toggleBig = async () => {
+    if (document.fullscreenElement) return void document.exitFullscreen().catch(() => setBig(false));
+    if (big) return setBig(false);
+    try {
+      await rootRef.current!.requestFullscreen();
+    } catch {
+      setBig(true);
+    }
+  };
+  const toggleRef = useRef(toggleBig);
+  toggleRef.current = toggleBig;
+  useEffect(() => {
+    const onFs = () => setBig(!!document.fullscreenElement);
+    const onToggle = () => toggleRef.current();
+    const onEsc = (e: KeyboardEvent) => e.key === "Escape" && !document.fullscreenElement && setBig(false);
+    document.addEventListener("fullscreenchange", onFs);
+    window.addEventListener("impulsa-fullscreen", onToggle);
+    window.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFs);
+      window.removeEventListener("impulsa-fullscreen", onToggle);
+      window.removeEventListener("keydown", onEsc);
+    };
+  }, []);
   const [dragOver, setDragOver] = useState(false);
 
   useEffect(() => {
@@ -116,7 +144,10 @@ export default function Preview() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div
+      ref={rootRef}
+      className={big ? "fixed inset-0 z-50 flex flex-col bg-[#07070c]" : "flex min-h-0 flex-1 flex-col"}
+    >
       <div
         ref={boxRef}
         className={`relative flex min-h-0 flex-1 items-center justify-center bg-[#07070c] ${dragOver ? "ring-2 ring-[var(--accent)] ring-inset" : ""}`}
@@ -217,9 +248,20 @@ export default function Preview() {
           {fmt(time)} <span className="text-[var(--muted)]">/ {fmt(duration)}</span>
         </span>
         <div className="flex-1" />
-        <span className="hidden text-xs text-[var(--muted)] lg:inline">
-          Espacio: reproducir · S: dividir clip · Supr: borrar · ←/→: mover · arrastra textos e imágenes en el visor
-        </span>
+        {!big && (
+          <span className="hidden text-xs text-[var(--muted)] lg:inline">
+            Espacio: reproducir · S: dividir clip · Supr: borrar · ←/→: mover · F: pantalla completa
+          </span>
+        )}
+        <button
+          className="btn"
+          onClick={toggleBig}
+          disabled={empty}
+          title={big ? "Salir de pantalla completa (Esc)" : "Pantalla completa (F)"}
+        >
+          {big ? "✕ Salir" : "⛶"}
+          <span className="hidden sm:inline">{big ? "" : " Agrandar"}</span>
+        </button>
       </div>
     </div>
   );
