@@ -307,7 +307,7 @@ function drawOverlay(
     const size = p.size * u * o.size;
     let text = o.text ?? "";
     if (o.animation === "typewriter") text = text.slice(0, Math.ceil(text.length * clamp((t - o.start) / 1)));
-    ctx.font = `${p.weight} ${size}px ${FONT}`;
+    ctx.font = `${p.weight} ${size}px ${o.font ? `"${o.font}", ${FONT}` : FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const lines = wrap(ctx, text, W * 0.86);

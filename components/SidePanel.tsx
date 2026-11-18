@@ -5,13 +5,13 @@ import * as A from "@/lib/actions";
 import { addFiles, addVideoSound, WHISPER_MODELS } from "@/lib/media";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
-import { BRAND_FONTS } from "@/lib/brand";
 import { store, useEditor } from "@/lib/store";
 import { narrateSubtitles, narrateText, voiceInfo, type OriginalAudio, type VoiceInfo } from "@/lib/tts";
 import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type SfxName, type SubtitlePreset } from "@/lib/types";
 import BrandPanel from "./BrandPanel";
 import ColorField from "./ColorField";
 import Field from "./Field";
+import FontSelect from "./FontSelect";
 import PublishPanel from "./PublishPanel";
 import ReferencesPanel from "./ReferencesPanel";
 import Inspector from "./Inspector";
@@ -365,33 +365,14 @@ const TEXT_PRESETS = [
 /** Typography of every text and subtitle of this video. */
 function VideoFontSelect() {
   const font = useEditor((s) => s.project.font ?? "");
-  const extra = useEditor((s) => s.brand?.fonts ?? []);
   return (
     <Field label="Tipografía (textos y subtítulos)">
-      <select
+      <FontSelect
         id="video-font"
-        className="input"
         value={font}
-        onChange={(e) => store.edit((p) => ({ ...p, font: e.target.value || undefined }))}
-      >
-        <option value="">Predeterminada (Inter)</option>
-        {extra.length > 0 && (
-          <optgroup label="Tus tipografías">
-            {extra.map((f) => (
-              <option key={f.name} value={f.name}>
-                {f.name}
-              </option>
-            ))}
-          </optgroup>
-        )}
-        <optgroup label="Recomendadas">
-          {BRAND_FONTS.map((f) => (
-            <option key={f.name} value={f.name}>
-              {f.name} — {f.style}
-            </option>
-          ))}
-        </optgroup>
-      </select>
+        emptyLabel="Predeterminada (Inter)"
+        onChange={(f) => store.edit((p) => ({ ...p, font: f || undefined }))}
+      />
       <span className="mt-1 block text-[10px] text-[var(--muted)]">
         Para subir tu propia letra o buscarla desde una foto, andá a 🎨 Marca.
       </span>
@@ -503,9 +484,13 @@ function VoiceSection() {
 
 function TextTab() {
   const [text, setText] = useState("");
+  const [font, setFont] = useState("");
   return (
     <div className="space-y-3">
       <input className="input" placeholder="Escribe tu texto…" value={text} onChange={(e) => setText(e.target.value)} />
+      <Field label="Tipografía">
+        <FontSelect id="new-text-font" value={font} emptyLabel="La del video" onChange={setFont} />
+      </Field>
       <div className="space-y-2">
         {TEXT_PRESETS.map((p) => (
           <button
@@ -513,7 +498,7 @@ function TextTab() {
             className="btn w-full justify-between"
             onClick={() => {
               const t = store.get().time;
-              const id = A.addText({ text: text || p.text, preset: p.preset, start: t, end: t + 3, position: p.preset === "cta" ? "bottom" : "center" });
+              const id = A.addText({ text: text || p.text, preset: p.preset, font, start: t, end: t + 3, position: p.preset === "cta" ? "bottom" : "center" });
               store.set({ selection: { kind: "overlay", id } });
             }}
           >
@@ -522,7 +507,10 @@ function TextTab() {
           </button>
         ))}
       </div>
-      <p className="text-[11px] text-[var(--muted)]">Se añade en la posición del cabezal. Arrástralo en el visor para moverlo.</p>
+      <p className="text-[11px] text-[var(--muted)]">
+        Se añade en la posición del cabezal. Arrástralo en el visor para moverlo. Para cambiarle la letra después, tocá el
+        texto y elegí otra en Propiedades. Tus propias tipografías se suben en 🎨 Marca.
+      </p>
     </div>
   );
 }

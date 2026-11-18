@@ -157,6 +157,11 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
           description: "titulo: grande con borde. subtitulo: mediano. etiqueta: caja de color. cta: botón redondeado.",
         },
         color: { type: "string", description: "Color hex (texto, o fondo de la caja en etiqueta/cta)" },
+        font: {
+          type: "string",
+          description:
+            "Tipografía solo para este texto (nombre de Google Fonts o una de las tipografías de la marca). Omitir para usar la del video.",
+        },
         size: { type: "number", description: "Multiplicador de tamaño (0.3–3). Por defecto 1" },
         animation,
       },
@@ -310,6 +315,7 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
         end: { type: "number" },
         text: { type: "string" },
         color: { type: "string", description: "Hex" },
+        font: { type: "string", description: "Para textos: tipografía (\"\" = la del video)" },
         preset: { type: "string", enum: ["titulo", "subtitulo", "etiqueta", "cta"] },
         position,
         x: { type: "number", description: "0–1" },

@@ -6,6 +6,7 @@ import { store, useEditor } from "@/lib/store";
 import { EFFECT_LABELS, EFFECT_TYPES, type Animation, type EffectType, type Project, type TextPreset } from "@/lib/types";
 import { deleteSelection } from "@/lib/actions";
 import ColorField from "./ColorField";
+import FontSelect from "./FontSelect";
 import Field from "./Field";
 
 /** Updates an item in place; consecutive edits of the same field are merged into one undo step. */
@@ -153,6 +154,9 @@ export default function Inspector() {
                 <ColorField id={`text-color-${o.id}`} value={o.color ?? (o.preset === "etiqueta" || o.preset === "cta" ? "#ff3d71" : "#ffffff")} onChange={(c) => set({ color: c })} />
               </Field>
             </div>
+            <Field label="Tipografía">
+              <FontSelect id={`text-font-${o.id}`} value={o.font ?? ""} emptyLabel="La del video" onChange={(f) => set({ font: f || undefined })} />
+            </Field>
           </>
         )}
         {timeFields(o.start, o.end, (s, e) => set({ start: s, end: Math.max(s + 0.1, e) }, "time"))}

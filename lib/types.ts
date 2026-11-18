@@ -51,6 +51,8 @@ export interface Overlay {
   text?: string;
   preset?: TextPreset;
   color?: string;
+  /** texts only: own typography (missing = the video's typography) */
+  font?: string;
   start: number;
   end: number;
   /** center of the overlay, normalized 0..1 */
