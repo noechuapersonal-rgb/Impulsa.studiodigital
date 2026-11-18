@@ -206,7 +206,7 @@ export default function Inspector() {
       update(`${a.id}${key}`, (p) => ({ ...p, audio: p.audio.map((x) => (x.id === a.id ? { ...x, ...patch } : x)) }));
     return (
       <div className="space-y-3">
-        {header(a.kind === "music" ? "Música" : "Efecto de sonido")}
+        {header(a.kind === "music" ? "Música" : a.kind === "voice" ? "Voz IA" : "Efecto de sonido")}
         <div className="text-xs text-[var(--muted)]">{a.name}</div>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Inicio (s)">

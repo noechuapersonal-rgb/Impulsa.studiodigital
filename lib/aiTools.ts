@@ -252,6 +252,29 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
     },
   },
   {
+    name: "add_voiceover",
+    description:
+      "Voz en off generada (texto a voz, voz sintética gratuita en español o inglés). Sin 'text' lee en voz alta los subtítulos actuales, cada línea en su momento (crea subtítulos antes si no hay). Con 'text' lee ese guion desde 'start' y, por defecto, también lo convierte en subtítulos sincronizados con la voz. Úsalo cuando pidan 'que una voz lea los subtítulos', 'poné voz en off', 'narración', 'locución', o videos sin voz (fotos de producto, b-roll) a los que quieran agregarles narración. Volver a leer los subtítulos reemplaza la voz anterior.",
+    input_schema: {
+      type: "object",
+      properties: {
+        text: {
+          type: "string",
+          description: "Guion a leer (frases cortas, una idea por oración). Omitir para leer los subtítulos.",
+        },
+        start: { type: "number", description: "Segundo donde empieza el guion (solo con text). Por defecto 0." },
+        language: { type: "string", enum: ["es", "en"], description: "Por defecto se detecta del texto." },
+        original_audio: {
+          type: "string",
+          enum: ["mantener", "bajar", "silenciar"],
+          description:
+            "Qué hacer con el sonido original de los clips. 'silenciar' si la voz lee lo mismo que ya se dice en el video (evita que se escuchen dos voces). 'bajar' (por defecto) lo deja de fondo. La música de fondo se baja sola debajo de la voz.",
+        },
+        subtitles: { type: "boolean", description: "Con text: crear subtítulos del guion. Por defecto true." },
+      },
+    },
+  },
+  {
     name: "apply_brand",
     description:
       "Aplica el kit de marca del cliente al video: su tipografía y colores en textos y subtítulos, y (si tiene) su logo en una esquina durante todo el video. Úsalo cuando pidan 'pon mi marca', 'mi logo', 'mis colores', o al armar un video para su negocio.",
@@ -326,7 +349,7 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
       properties: {
         what: {
           type: "string",
-          enum: ["subtitles", "effects", "overlays", "texts", "images", "music", "sound_effects"],
+          enum: ["subtitles", "effects", "overlays", "texts", "images", "music", "sound_effects", "voice"],
         },
       },
       required: ["what"],
@@ -353,6 +376,7 @@ export const SYSTEM_PROMPT = `Eres el editor de video con IA de "Impulsa Studio"
 - Música de fondo: volumen 0.12 a 0.2 si hay voz (0.5 a 0.8 si no hay voz), con fundido de salida.
 - Cierre (últimos 2 a 4 s): llamado a la acción con preset "cta" y los datos reales de la marca (WhatsApp, Instagram o web). Nunca inventes teléfonos, precios, descuentos ni promociones.
 - Textos: frases cortas y fáciles de leer en un celular. Español rioplatense si el cliente escribe así ("escribinos", "aprovechá"). Usa los colores y la tipografía de la marca cuando exista (apply_brand).
+- Voz en off (add_voiceover): solo cuando la pidan o el video no tenga voz y pidan narración. Si la voz lee lo mismo que la persona ya dice en el video, usa original_audio "silenciar". El guion: frases cortas y naturales; los precios y números escríbelos tal cual (la herramienta los pronuncia).
 - Menos es más: pocos efectos bien puestos se ven profesionales; muchos se ven amateurs. Evita filtros fuertes salvo que los pidan.
 
 ## Marca y referencias

@@ -112,6 +112,12 @@ export default function Timeline({ mobile = false }: { mobile?: boolean }) {
         .map((a) => ({ id: a.id, kind: "audio", start: a.start, end: a.start + a.duration, label: `♪ ${a.name}`, color: "#7a6a1f" })),
     },
     {
+      title: "Voz",
+      items: project.audio
+        .filter((a) => a.kind === "voice")
+        .map((a) => ({ id: a.id, kind: "audio", start: a.start, end: a.start + a.duration, label: `🗣️ ${a.name}`, color: "#1f6a7a" })),
+    },
+    {
       title: "Sonidos",
       items: project.audio
         .filter((a) => a.kind === "sfx")

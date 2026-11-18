@@ -82,7 +82,8 @@ export type SfxName = (typeof SFX_NAMES)[number];
 
 export interface AudioItem {
   id: string;
-  kind: "music" | "sfx";
+  /** voice = voice-over generated from text ("Voz IA") */
+  kind: "music" | "sfx" | "voice";
   assetId?: string;
   sfx?: SfxName;
   name: string;

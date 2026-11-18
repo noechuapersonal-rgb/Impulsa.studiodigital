@@ -6,6 +6,7 @@ import { WHISPER_MODELS } from "./media";
 import { getPlayer } from "./player";
 import { totalDuration } from "./project";
 import { store } from "./store";
+import { narrateSubtitles, narrateText, type OriginalAudio } from "./tts";
 
 type Input = Record<string, unknown>;
 const ranges = (v: unknown) =>
@@ -108,6 +109,24 @@ export async function executeTool(name: string, input: Input): Promise<ToolOutpu
     case "set_format":
       A.setFormat(input as Parameters<typeof A.setFormat>[0]);
       return `Formato: ${store.get().project.aspect}, encuadre ${store.get().project.fit}.`;
+    case "add_voiceover": {
+      const lang = input.language === "en" || input.language === "es" ? input.language : undefined;
+      const original = ["mantener", "bajar", "silenciar"].includes(String(input.original_audio))
+        ? (input.original_audio as OriginalAudio)
+        : undefined;
+      const text = typeof input.text === "string" ? input.text.trim() : "";
+      if (text) {
+        const end = await narrateText(text, {
+          start: typeof input.start === "number" ? input.start : 0,
+          lang,
+          original,
+          subtitles: input.subtitles !== false,
+        });
+        return `Listo: voz en off agregada, termina en el segundo ${end.toFixed(1)}${input.subtitles !== false ? " (con subtítulos sincronizados)" : ""}.`;
+      }
+      const n = await narrateSubtitles({ lang, original });
+      return `Listo: la voz lee ${n} frases de los subtítulos.`;
+    }
     case "set_video_volume":
       A.setVideoVolume(Number(input.volume ?? 1));
       return "Volumen actualizado.";

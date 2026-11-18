@@ -6,6 +6,7 @@ import { addFiles, addVideoSound, WHISPER_MODELS } from "@/lib/media";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { store, useEditor } from "@/lib/store";
+import { narrateSubtitles, narrateText, type OriginalAudio } from "@/lib/tts";
 import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type SfxName, type SubtitlePreset } from "@/lib/types";
 import BrandPanel from "./BrandPanel";
 import ColorField from "./ColorField";
@@ -276,6 +277,8 @@ function SubtitlesTab() {
         {err && <p className="text-xs text-red-400">{err}</p>}
       </div>
 
+      <VoiceSection />
+
       <div className="space-y-2">
         <div className="label">Estilo</div>
         <div className="grid grid-cols-3 gap-1.5">
@@ -356,6 +359,86 @@ const TEXT_PRESETS = [
   { preset: "etiqueta", label: "Etiqueta", text: "NUEVO" },
   { preset: "cta", label: "Llamada a la acción", text: "¡Sígueme!" },
 ];
+
+function VoiceSection() {
+  const hasCues = useEditor((s) => s.project.cues.length > 0);
+  const hasClips = useEditor((s) => s.project.clips.length > 0);
+  const busy = useEditor((s) => s.busy);
+  const [mode, setMode] = useState<"subs" | "text">("subs");
+  const [text, setText] = useState("");
+  const [original, setOriginal] = useState<OriginalAudio>("bajar");
+  const [err, setErr] = useState("");
+
+  const run = async () => {
+    setErr("");
+    try {
+      if (mode === "subs") {
+        const n = await narrateSubtitles({ original });
+        store.set({ toast: `Listo: la voz lee ${n} frases de tus subtítulos. Dale play para escucharla.` });
+      } else {
+        await narrateText(text, { start: store.get().time, original, subtitles: true });
+        store.set({ toast: "Listo: voz en off agregada con sus subtítulos. Dale play para escucharla." });
+      }
+    } catch (e) {
+      setErr((e as Error).message);
+    }
+  };
+
+  return (
+    <div className="space-y-2 rounded-xl border border-[var(--line)] p-3">
+      <div className="label">🗣️ Voz en off (texto a voz)</div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {(
+          [
+            ["subs", "Leer subtítulos"],
+            ["text", "Escribir un texto"],
+          ] as const
+        ).map(([m, l]) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`rounded-lg border py-2 text-xs font-bold ${mode === m ? "border-[var(--accent)] bg-[var(--panel-2)]" : "border-[var(--line)]"}`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+      {mode === "text" && (
+        <textarea
+          id="voice-text"
+          className="input"
+          rows={4}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Ej: ¿Buscás zapatillas cómodas? Llegó la nueva colección. Envíos a todo el país. Escribinos por WhatsApp."
+        />
+      )}
+      {hasClips && (
+        <select id="voice-original" className="input" value={original} onChange={(e) => setOriginal(e.target.value as OriginalAudio)}>
+          <option value="bajar">Bajar el sonido del video</option>
+          <option value="silenciar">Silenciar el video (si la voz repite lo que ya se dice)</option>
+          <option value="mantener">Dejar el sonido del video igual</option>
+        </select>
+      )}
+      <button
+        className="btn btn-primary w-full justify-center"
+        disabled={!!busy || (mode === "subs" ? !hasCues : !text.trim())}
+        onClick={run}
+      >
+        🗣️ {mode === "subs" ? "Leer los subtítulos en voz alta" : "Agregar voz en off"}
+      </button>
+      <p className="text-[11px] text-[var(--muted)]">
+        {mode === "subs"
+          ? hasCues
+            ? "Cada frase suena cuando aparece en pantalla. Si la volvés a generar, reemplaza la voz anterior."
+            : "Primero generá o escribí subtítulos."
+          : "Empieza donde está el cursor y también crea los subtítulos. Los precios y números se leen solos."}{" "}
+        Voz sintética gratuita (español o inglés); la primera vez se descarga a tu navegador.
+      </p>
+      {err && <p className="text-xs text-red-400">{err}</p>}
+    </div>
+  );
+}
 
 function TextTab() {
   const [text, setText] = useState("");

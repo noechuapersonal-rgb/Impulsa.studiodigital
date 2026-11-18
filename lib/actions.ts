@@ -381,6 +381,8 @@ export function clearItems(what: string) {
         return { ...p, audio: p.audio.filter((a) => a.kind !== "music") };
       case "sound_effects":
         return { ...p, audio: p.audio.filter((a) => a.kind !== "sfx") };
+      case "voice":
+        return { ...p, audio: p.audio.filter((a) => a.kind !== "voice") };
       default:
         return p;
     }
@@ -544,7 +546,7 @@ export function describeProject(): string {
   if (p.audio.length) {
     L.push("Audio añadido:");
     for (const a of p.audio)
-      L.push(`  - [${a.id}] ${a.kind === "music" ? "música" : "efecto de sonido"} "${a.name}" en ${a.start.toFixed(2)}s, dura ${a.duration.toFixed(2)}s, volumen ${Math.round(a.volume * 100)}%`);
+      L.push(`  - [${a.id}] ${a.kind === "music" ? "música" : a.kind === "voice" ? "voz IA diciendo" : "efecto de sonido"} "${a.name}" en ${a.start.toFixed(2)}s, dura ${a.duration.toFixed(2)}s, volumen ${Math.round(a.volume * 100)}%`);
   }
   if (p.effects.length) {
     L.push("Efectos visuales:");

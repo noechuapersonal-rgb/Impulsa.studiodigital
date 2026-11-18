@@ -201,7 +201,7 @@ export function removeRanges(p: Project, rangesIn: Range[]): Project {
 
   const audio = p.audio
     .map((a) => {
-      if (a.kind === "sfx") {
+      if (a.kind === "sfx" || a.kind === "voice") {
         const inside = ranges.some((r) => a.start >= r.start && a.start < r.end);
         return inside ? null : { ...a, start: map(a.start) };
       }
