@@ -85,20 +85,46 @@ export async function saveCurrentProject(): Promise<"cuenta" | "dispositivo"> {
   return "dispositivo";
 }
 
-/** Projects of the account, or of this device when accounts are not available. */
-export async function listProjects(): Promise<{ projects: ProjectSummary[]; where: "cuenta" | "dispositivo" }> {
+/**
+ * Projects of the account plus the ones saved on this device. Projects that only exist on this device
+ * (made before the account could save them) are uploaded to the account so they show up everywhere.
+ */
+export async function listProjects(): Promise<{
+  projects: ProjectSummary[];
+  where: "cuenta" | "dispositivo";
+  problem?: string;
+}> {
+  const local = await idbAll<LocalRecord>(PROJECTS).catch(() => [] as LocalRecord[]);
+  let cloud: ProjectSummary[] | null = null;
+  let problem: string | undefined;
   try {
     const res = await fetch("/api/projects", { cache: "no-store" });
-    if (res.ok) return { projects: (await res.json()).projects, where: "cuenta" };
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) cloud = body.projects ?? [];
+    else if (res.status !== 404 && res.status !== 401) problem = body.error || `Error ${res.status}`;
   } catch {
-    /* fall back to this device */
+    /* offline: this device only */
   }
-  const local = await idbAll<LocalRecord>(PROJECTS).catch(() => []);
+
+  if (cloud) {
+    const ids = new Set(cloud.map((p) => p.id));
+    const onlyHere = local.filter((l) => !ids.has(l.id));
+    // upload in the background (best effort)
+    for (const l of onlyHere)
+      fetch(`/api/projects/${l.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: l.name, data: l.data, thumb: l.thumb }),
+      }).catch(() => undefined);
+    const merged = [...cloud, ...onlyHere.map(({ id, name, thumb, updated_at }) => ({ id, name, thumb, updated_at }))];
+    return { projects: merged.sort((a, b) => b.updated_at.localeCompare(a.updated_at)), where: "cuenta" };
+  }
   return {
     projects: local
       .map(({ id, name, thumb, updated_at }) => ({ id, name, thumb, updated_at }))
       .sort((a, b) => b.updated_at.localeCompare(a.updated_at)),
     where: "dispositivo",
+    problem,
   };
 }
 

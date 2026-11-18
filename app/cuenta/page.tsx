@@ -154,7 +154,10 @@ export default async function CuentaPage({
         )}
       </section>
 
-      <div className="mt-4 flex justify-center">
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <Link href="/cuenta/clave" className="btn">
+          🔑 Crear o cambiar contraseña
+        </Link>
         <HelpButton compact />
       </div>
 

@@ -16,6 +16,7 @@ function ago(iso: string) {
 export default function ProjectsList() {
   const [items, setItems] = useState<ProjectSummary[] | null>(null);
   const [where, setWhere] = useState<"cuenta" | "dispositivo">("cuenta");
+  const [problem, setProblem] = useState("");
   const [confirm, setConfirm] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -24,6 +25,7 @@ export default function ProjectsList() {
     listProjects().then((r) => {
       setItems(r.projects);
       setWhere(r.where);
+      setProblem(r.problem ?? "");
     });
   }, []);
 
@@ -64,6 +66,13 @@ export default function ProjectsList() {
         {where === "cuenta" ? " y quedan en tu cuenta" : " en este dispositivo"}. Los videos quedan guardados en el
         dispositivo donde los subiste: si abrís un proyecto en otro, te vamos a pedir que los elijas de nuevo.
       </p>
+
+      {problem && (
+        <p className="mt-3 max-w-2xl rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-200">
+          No pudimos traer los proyectos guardados en tu cuenta, así que solo ves los de este dispositivo. Probá de
+          nuevo en un rato; si sigue pasando, escribinos desde «Ayuda». (Detalle: {problem})
+        </p>
+      )}
 
       {items === null ? (
         <p className="mt-10 text-center text-sm text-[var(--muted)]">Cargando…</p>

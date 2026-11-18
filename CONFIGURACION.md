@@ -109,3 +109,20 @@ Sin configurar nada, la voz en off usa una voz básica gratuita (suena robótica
 4. Redeploy.
 
 Cada voz natural gasta créditos de IA del cliente: 1 crédito cada 200 letras (un video de 40 segundos ≈ 3 créditos).
+
+## Ingreso de clientes
+
+La pantalla de ingreso ofrece **mail y contraseña** (con "Crear cuenta" y "¿Olvidaste tu contraseña?"),
+el **enlace por mail** como alternativa y, si lo activas, **Entrar con Google**.
+
+- **Confirmación de mail al crear cuenta:** en Supabase → **Authentication → Sign In / Providers → Email**,
+  la opción **Confirm email** decide si al crear la cuenta hay que abrir un mail antes de entrar. Desactivada,
+  entran al instante (más cómodo, pero cualquiera puede registrarse con un mail inventado y usar la prueba gratis).
+- **Entrar con Google:**
+  1. En <https://console.cloud.google.com> crea un proyecto → **APIs y servicios → Pantalla de consentimiento
+     de OAuth** (tipo *Externo*, nombre de la app y tu mail) → **Credenciales → Crear credenciales → ID de cliente
+     de OAuth** → tipo *Aplicación web*.
+  2. En **URI de redireccionamiento autorizados** pon `https://TU-PROYECTO.supabase.co/auth/v1/callback`
+     (la Project URL de Supabase + `/auth/v1/callback`). Crea y copia el **ID de cliente** y el **Secreto**.
+  3. En Supabase → **Authentication → Sign In / Providers → Google**: actívalo, pega el ID y el secreto y guarda.
+  4. En Vercel agrega `NEXT_PUBLIC_GOOGLE_LOGIN` = `1` y haz Redeploy.
