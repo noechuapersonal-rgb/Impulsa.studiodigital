@@ -11,6 +11,11 @@ const range = {
   required: ["start", "end"],
 } as const;
 
+const outlineProp = {
+  type: "string",
+  enum: ["borde", "sombra", "nada"],
+  description: "Títulos y subtítulos: borde negro alrededor de las letras (por defecto), sombra suave o nada.",
+};
 const position = {
   type: "string",
   enum: ["center", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"],
@@ -157,6 +162,7 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
           description: "titulo: grande con borde. subtitulo: mediano. etiqueta: caja de color. cta: botón redondeado.",
         },
         color: { type: "string", description: "Color hex (texto, o fondo de la caja en etiqueta/cta)" },
+        outline: outlineProp,
         font: {
           type: "string",
           description:
@@ -316,6 +322,7 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
         text: { type: "string" },
         color: { type: "string", description: "Hex" },
         font: { type: "string", description: "Para textos: tipografía (\"\" = la del video)" },
+        outline: outlineProp,
         preset: { type: "string", enum: ["titulo", "subtitulo", "etiqueta", "cta"] },
         position,
         x: { type: "number", description: "0–1" },

@@ -38,6 +38,7 @@ import {
 
 /** Editing actions shared by the UI and the AI assistant. */
 
+const outlineOf = (v: unknown) => (v === "borde" || v === "sombra" || v === "nada" ? v : undefined);
 const num = (v: unknown, d: number) => (typeof v === "number" && isFinite(v) ? v : d);
 
 export function findAsset(name: unknown, kind: AssetKind): Asset | undefined {
@@ -231,6 +232,7 @@ export function addText(o: {
   preset?: string;
   color?: string;
   font?: string;
+  outline?: string;
   animation?: string;
   size?: number;
   x?: number;
@@ -254,6 +256,7 @@ export function addText(o: {
         preset: PRESETS.includes(o.preset as TextPreset) ? (o.preset as TextPreset) : "titulo",
         color: o.color,
         font: typeof o.font === "string" && o.font.trim() ? o.font.trim() : undefined,
+        outline: outlineOf(o.outline),
         start,
         end: Math.max(end, start + 0.2),
         x,
@@ -425,6 +428,7 @@ export function updateItem(id: string, o: Record<string, unknown>): string {
               text: typeof o.text === "string" ? o.text : x.text,
               color: typeof o.color === "string" ? o.color : x.color,
               font: typeof o.font === "string" ? o.font.trim() || undefined : x.font,
+              outline: outlineOf(o.outline) ?? x.outline,
               preset: PRESETS.includes(o.preset as TextPreset) ? (o.preset as TextPreset) : x.preset,
               animation: anim(o.animation, x.animation),
               fill: x.kind === "image" ? imageFill(o.fill, x.fill ?? "free") : x.fill,
@@ -543,7 +547,7 @@ export function describeProject(): string {
     L.push("Textos e imágenes superpuestos (posición x,y de 0 a 1 desde arriba a la izquierda):");
     for (const o of p.overlays)
       L.push(
-        `  - [${o.id}] ${o.kind === "text" ? `texto "${o.text}" (${o.preset}${o.color ? `, color ${o.color}` : ""}${o.font ? `, tipografía ${o.font}` : ""})` : `imagen "${name(o.assetId)}"`} ${o.start.toFixed(2)}–${o.end.toFixed(2)}s, ${o.kind === "image" && (o.fill === "cover" || o.fill === "contain") ? `pantalla completa (${o.fill})` : `x=${o.x.toFixed(2)} y=${o.y.toFixed(2)}, tamaño ${o.size.toFixed(2)}`}, animación ${o.animation}`,
+        `  - [${o.id}] ${o.kind === "text" ? `texto "${o.text}" (${o.preset}${o.color ? `, color ${o.color}` : ""}${o.font ? `, tipografía ${o.font}` : ""}${o.outline && o.outline !== "borde" ? `, contorno ${o.outline}` : ""})` : `imagen "${name(o.assetId)}"`} ${o.start.toFixed(2)}–${o.end.toFixed(2)}s, ${o.kind === "image" && (o.fill === "cover" || o.fill === "contain") ? `pantalla completa (${o.fill})` : `x=${o.x.toFixed(2)} y=${o.y.toFixed(2)}, tamaño ${o.size.toFixed(2)}`}, animación ${o.animation}`,
       );
   }
   if (p.audio.length) {

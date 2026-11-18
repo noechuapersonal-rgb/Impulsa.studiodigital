@@ -154,6 +154,20 @@ export default function Inspector() {
                 <ColorField id={`text-color-${o.id}`} value={o.color ?? (o.preset === "etiqueta" || o.preset === "cta" ? "#ff3d71" : "#ffffff")} onChange={(c) => set({ color: c })} />
               </Field>
             </div>
+            {(o.preset === "titulo" || o.preset === "subtitulo" || !o.preset) && (
+              <Field label="Contorno de las letras">
+                <select
+                  id={`text-outline-${o.id}`}
+                  className="input"
+                  value={o.outline ?? "borde"}
+                  onChange={(e) => set({ outline: e.target.value as "borde" | "sombra" | "nada" })}
+                >
+                  <option value="borde">Borde negro</option>
+                  <option value="sombra">Sombra suave</option>
+                  <option value="nada">Sin borde</option>
+                </select>
+              </Field>
+            )}
             <Field label="Tipografía">
               <FontSelect id={`text-font-${o.id}`} value={o.font ?? ""} emptyLabel="La del video" onChange={(f) => set({ font: f || undefined })} />
             </Field>

@@ -485,11 +485,19 @@ function VoiceSection() {
 function TextTab() {
   const [text, setText] = useState("");
   const [font, setFont] = useState("");
+  const [outline, setOutline] = useState<"borde" | "sombra" | "nada">("borde");
   return (
     <div className="space-y-3">
       <input className="input" placeholder="Escribe tu texto…" value={text} onChange={(e) => setText(e.target.value)} />
       <Field label="Tipografía">
         <FontSelect id="new-text-font" value={font} emptyLabel="La del video" onChange={setFont} />
+      </Field>
+      <Field label="Contorno (títulos y subtítulos)">
+        <select id="new-text-outline" className="input" value={outline} onChange={(e) => setOutline(e.target.value as typeof outline)}>
+          <option value="borde">Borde negro</option>
+          <option value="sombra">Sombra suave</option>
+          <option value="nada">Sin borde</option>
+        </select>
       </Field>
       <div className="space-y-2">
         {TEXT_PRESETS.map((p) => (
@@ -500,7 +508,7 @@ function TextTab() {
               const t = store.get().time;
                             // titles and calls to action use the brand's title typography unless another one is chosen
               const titleFont = p.preset === "titulo" || p.preset === "cta" ? store.get().brand?.titleFont : undefined;
-              const id = A.addText({ text: text || p.text, preset: p.preset, font: font || titleFont, start: t, end: t + 3, position: p.preset === "cta" ? "bottom" : "center" });
+              const id = A.addText({ text: text || p.text, preset: p.preset, font: font || titleFont, outline, start: t, end: t + 3, position: p.preset === "cta" ? "bottom" : "center" });
               store.set({ selection: { kind: "overlay", id } });
             }}
           >

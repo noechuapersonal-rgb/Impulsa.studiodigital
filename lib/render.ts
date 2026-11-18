@@ -250,7 +250,7 @@ export function overlayBounds(o: Overlay, W: number, H: number, images: Map<stri
   const size = p.size * u * o.size;
   let w = size * (o.text?.length ?? 1) * 0.55;
   if (ctx) {
-    ctx.font = `${p.weight} ${size}px ${FONT}`;
+    ctx.font = `${p.weight} ${size}px ${o.font ? `"${o.font}", ${FONT}` : FONT}`;
     w = Math.min(W * 0.9, ctx.measureText(o.text ?? "").width);
   }
   return { x: o.x * W - w / 2 - size * 0.4, y: o.y * H - size * 0.8, w: w + size * 0.8, h: size * 1.6 };
@@ -323,12 +323,22 @@ function drawOverlay(
         ctx.fillStyle = contrastText(color);
         ctx.fillText(line, 0, y + size * 0.04);
       } else {
-        ctx.lineJoin = "round";
-        ctx.lineWidth = size * 0.14;
-        ctx.strokeStyle = "rgba(0,0,0,0.85)";
-        ctx.strokeText(line, 0, y);
+        const outline = o.outline ?? "borde";
+        if (outline === "borde") {
+          ctx.lineJoin = "round";
+          ctx.lineWidth = size * 0.14;
+          ctx.strokeStyle = "rgba(0,0,0,0.85)";
+          ctx.strokeText(line, 0, y);
+        }
+        ctx.save();
+        if (outline === "sombra") {
+          ctx.shadowColor = "rgba(0,0,0,0.55)";
+          ctx.shadowBlur = size * 0.25;
+          ctx.shadowOffsetY = size * 0.05;
+        }
         ctx.fillStyle = color;
         ctx.fillText(line, 0, y);
+        ctx.restore();
       }
     });
   }

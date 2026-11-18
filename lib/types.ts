@@ -53,6 +53,8 @@ export interface Overlay {
   color?: string;
   /** texts only: own typography (missing = the video's typography) */
   font?: string;
+  /** titles / subtitles: dark outline (default), soft shadow or nothing */
+  outline?: "borde" | "sombra" | "nada";
   start: number;
   end: number;
   /** center of the overlay, normalized 0..1 */

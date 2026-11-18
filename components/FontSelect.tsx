@@ -3,6 +3,8 @@
 import { BRAND_FONTS, loadFont } from "@/lib/brand";
 import { useEditor } from "@/lib/store";
 
+const NONE: never[] = [];
+
 /** Typography picker: the client's own fonts (brand) + the recommended ones. "" = `emptyLabel`. */
 export default function FontSelect({
   id,
@@ -15,7 +17,8 @@ export default function FontSelect({
   onChange: (font: string) => void;
   emptyLabel: string;
 }) {
-  const extra = useEditor((s) => s.brand?.fonts ?? []);
+  const brandFonts = useEditor((s) => s.brand?.fonts);
+  const extra = brandFonts ?? NONE;
   const known = !value || extra.some((f) => f.name === value) || BRAND_FONTS.some((f) => f.name === value);
   return (
     <select
