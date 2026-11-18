@@ -4,15 +4,42 @@ import { revalidatePath } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { currentPeriod, getAccount, isAdminEmail, STATUS_LABELS, trialEndsAt } from "@/lib/account";
 import { accountsEnabled, config, formatPrice } from "@/lib/config";
+import { adminPasswordSet, isUnlocked, lock, passwordMatches, unlock } from "@/lib/adminLock";
 import { getAiRules, saveAiRules } from "@/lib/aiRules";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 export const metadata = { title: "Administración — Impulsa Studio" };
 
-async function requireAdmin() {
+/** Admin e-mail only (used to show the password screen). */
+async function requireAdminEmail() {
   const account = await getAccount();
   if (!account || !isAdminEmail(account.email)) notFound();
   return account;
+}
+
+/** Admin e-mail AND the panel password entered in this browser. */
+async function requireAdmin() {
+  const account = await requireAdminEmail();
+  if (!(await isUnlocked(account.user.id))) redirect("/admin");
+  return account;
+}
+
+async function unlockPanel(formData: FormData) {
+  "use server";
+  const account = await requireAdminEmail();
+  if (!passwordMatches(String(formData.get("password") ?? ""))) {
+    // slow down guessing
+    await new Promise((r) => setTimeout(r, 1500));
+    redirect("/admin?clave=incorrecta");
+  }
+  await unlock(account.user.id);
+  redirect("/admin");
+}
+
+async function lockPanel() {
+  "use server";
+  await lock();
+  redirect("/cuenta");
 }
 
 async function setManual(formData: FormData) {
@@ -50,12 +77,13 @@ const RULES_EXAMPLE = `Ejemplos (borralos y escribí los tuyos):
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; guardado?: string; opiniones?: string; error_reglas?: string }>;
+  searchParams: Promise<{ q?: string; guardado?: string; opiniones?: string; error_reglas?: string; clave?: string }>;
 }) {
   await connection();
   if (!accountsEnabled()) redirect("/editor");
-  await requireAdmin();
-  const { q = "", guardado, opiniones, error_reglas } = await searchParams;
+  const account = await requireAdminEmail();
+  const { q = "", guardado, opiniones, error_reglas, clave } = await searchParams;
+  if (!(await isUnlocked(account.user.id))) return <LockScreen wrong={clave === "incorrecta"} />;
   const onlyBad = opiniones === "malas";
 
   const admin = supabaseAdmin();
@@ -83,9 +111,14 @@ export default async function AdminPage({
     <main className="mx-auto min-h-screen max-w-5xl px-4 py-8">
       <header className="mb-6 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Administración</h1>
-        <Link href="/cuenta" className="btn">
-          Mi cuenta
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/cuenta" className="btn">
+            Mi cuenta
+          </Link>
+          <form action={lockPanel}>
+            <button className="btn">🔒 Bloquear panel</button>
+          </form>
+        </div>
       </header>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
@@ -258,6 +291,35 @@ export default async function AdminPage({
           </>
         )}
       </section>
+    </main>
+  );
+}
+
+function LockScreen({ wrong }: { wrong: boolean }) {
+  const configured = adminPasswordSet();
+  return (
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4 py-8">
+      <div className="panel space-y-4 rounded-2xl p-6">
+        <h1 className="text-xl font-bold">🔒 Panel de administración</h1>
+        {configured ? (
+          <form action={unlockPanel} className="space-y-3">
+            <label className="block space-y-1">
+              <span className="label block">Contraseña del panel</span>
+              <input id="password" name="password" type="password" autoFocus required className="input" autoComplete="current-password" />
+            </label>
+            {wrong && <p className="text-sm text-red-400">Contraseña incorrecta.</p>}
+            <button className="btn btn-primary w-full justify-center">Entrar</button>
+          </form>
+        ) : (
+          <p className="text-sm text-[var(--muted)]">
+            Falta crear la contraseña del panel: en Vercel → Settings → Environment Variables agregá{" "}
+            <b>ADMIN_PASSWORD</b> con la contraseña que quieras y hacé Redeploy.
+          </p>
+        )}
+        <Link href="/cuenta" className="block text-center text-sm text-[var(--muted)] underline">
+          Volver a mi cuenta
+        </Link>
+      </div>
     </main>
   );
 }

@@ -65,6 +65,7 @@ En tu proyecto de Vercel: **Settings → Environment Variables**. Agrega cada un
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | Tu WhatsApp de soporte con código de país, sin + ni espacios (ej. `5491123456789`); aparece en «❓ Ayuda» |
 | `NEXT_PUBLIC_SUPPORT_EMAIL` | Opcional: mail de soporte que aparece en «❓ Ayuda» |
 | `ADMIN_EMAILS` | Tu mail (para entrar al panel `/admin`). Varios, separados por coma |
+| `ADMIN_PASSWORD` | Contraseña que pide el panel `/admin` (además del mail). Sin esta variable el panel queda bloqueado |
 | `NEXT_PUBLIC_SITE_URL` | La dirección de tu web (ej. `https://impulsa-studiodigital.vercel.app`) |
 
 Después ve a **Deployments → … → Redeploy** para que tome los cambios.
