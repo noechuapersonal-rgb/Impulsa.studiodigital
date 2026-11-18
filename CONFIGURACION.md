@@ -95,3 +95,16 @@ En `/admin` tienes dos herramientas:
   Usa los 👎 para descubrir qué reglas agregar.
 
 (Necesitan las tablas `app_settings` y `ai_feedback` de `supabase/schema.sql`.)
+
+## Voces naturales (voz en off)
+
+Sin configurar nada, la voz en off usa una voz básica gratuita (suena robótica). Para voces naturales:
+
+1. Crea una cuenta en <https://elevenlabs.io> y elige un plan (el Starter alcanza para empezar).
+2. En **Voices → Voice Library** busca voces en español (filtra por idioma *Spanish* y acento, por ejemplo
+   *Mexican* o *Latin American*) y pulsa **Add to my voices** en las que te gusten. Esas son las que verán tus clientes.
+3. En **Developers → API Keys** crea una clave y pégala en Vercel como `ELEVENLABS_API_KEY`.
+   Opcional: `ELEVENLABS_VOICE_ID` con el Voice ID de la voz que quieres por defecto.
+4. Redeploy.
+
+Cada voz natural gasta créditos de IA del cliente: 1 crédito cada 200 letras (un video de 40 segundos ≈ 3 créditos).

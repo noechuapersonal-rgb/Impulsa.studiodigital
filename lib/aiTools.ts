@@ -254,7 +254,7 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
   {
     name: "add_voiceover",
     description:
-      "Voz en off generada (texto a voz, voz sintética gratuita en español o inglés). Sin 'text' lee en voz alta los subtítulos actuales, cada línea en su momento (crea subtítulos antes si no hay). Con 'text' lee ese guion desde 'start' y, por defecto, también lo convierte en subtítulos sincronizados con la voz. Úsalo cuando pidan 'que una voz lea los subtítulos', 'poné voz en off', 'narración', 'locución', o videos sin voz (fotos de producto, b-roll) a los que quieran agregarles narración. Volver a leer los subtítulos reemplaza la voz anterior.",
+      "Voz en off generada (texto a voz: voz natural si el servicio está configurado, si no una voz básica en español o inglés). Sin 'text' lee en voz alta los subtítulos actuales, cada línea en su momento (crea subtítulos antes si no hay). Con 'text' lee ese guion desde 'start' y, por defecto, también lo convierte en subtítulos sincronizados con la voz. Úsalo cuando pidan 'que una voz lea los subtítulos', 'poné voz en off', 'narración', 'locución', o videos sin voz (fotos de producto, b-roll) a los que quieran agregarles narración. Volver a leer los subtítulos reemplaza la voz anterior.",
     input_schema: {
       type: "object",
       properties: {

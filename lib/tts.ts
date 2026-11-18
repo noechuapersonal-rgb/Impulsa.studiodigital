@@ -64,6 +64,51 @@ function synthesize(texts: string[], lang: VoiceLang): Promise<Out[]> {
   });
 }
 
+// ---------- natural voices (ElevenLabs, through /api/tts) ----------
+
+export type PremiumVoice = { id: string; name: string; info: string };
+export type VoiceInfo = { premium: boolean; voices: PremiumVoice[]; charsPerCredit?: number };
+let infoP: Promise<VoiceInfo> | null = null;
+
+/** Which natural voices are available ({ premium: false } when the service is not configured). */
+export function voiceInfo(): Promise<VoiceInfo> {
+  infoP ??= fetch("/api/tts")
+    .then((r) => (r.ok ? r.json() : { premium: false, voices: [] }))
+    .catch(() => ({ premium: false, voices: [] }));
+  return infoP;
+}
+
+/** "free" = the basic voice that runs in the browser; anything else = a natural voice id ("" = default). */
+export type VoiceChoice = string;
+
+async function synthesizePremium(texts: string[], voice: string): Promise<Out[]> {
+  store.set({ busy: "Generando la voz…" });
+  const r = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ texts, voice }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || "No se pudo generar la voz.");
+  const ctx = new OfflineAudioContext(1, 1, 44100);
+  return Promise.all(
+    (data.audios as string[]).map(async (b64) => {
+      if (!b64) return { audio: new Float32Array(0), sampling_rate: 44100 };
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const buf = await ctx.decodeAudioData(bytes.buffer);
+      return { audio: new Float32Array(buf.getChannelData(0)), sampling_rate: buf.sampleRate };
+    }),
+  );
+}
+
+/** Light cleanup for the natural voices (they read numbers and prices on their own). */
+const tidy = (t: string) =>
+  t
+    .replace(/#[\p{L}\p{N}_]+/gu, " ")
+    .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
 // ---------- text normalization (the voices only know letters: numbers and symbols are spelled out) ----------
 
 const ES_UNITS = [
@@ -162,7 +207,7 @@ export function speakable(text: string, lang: VoiceLang): string {
     .replace(/&/g, lang === "es" ? " y " : " and ")
     .replace(/@/g, lang === "es" ? " arroba " : " at ")
     .replace(/\+/g, lang === "es" ? " más " : " plus ")
-    .replace(/#/g, " ")
+    .replace(/#[\p{L}\p{N}_]+/gu, " ")
     // emojis and other symbols
     .replace(/[^\p{L}\p{M}\s.,;:!?¡¿'’-]/gu, " ")
     .replace(/\s+/g, " ")
@@ -235,16 +280,17 @@ interface Line {
  */
 async function speakLines(
   lines: Line[],
-  o: { lang?: VoiceLang; original?: OriginalAudio; volume?: number; name: string; replace: boolean },
+  o: { lang?: VoiceLang; original?: OriginalAudio; volume?: number; voice?: VoiceChoice; name: string; replace: boolean },
 ) {
   const all = lines.map((l) => l.text).join(" ");
   const lang = o.lang ?? guessLang(all);
-  const texts = lines.map((l) => speakable(l.text, lang));
-  if (!texts.some(Boolean)) throw new Error("No hay texto para leer.");
-
   store.set({ busy: "Preparando la voz…" });
   try {
-    const outs = await synthesize(texts, lang);
+    // natural voice when available (and not explicitly the free one)
+    const premium = o.voice !== "free" && (await voiceInfo()).premium;
+    const texts = lines.map((l) => (premium ? tidy(l.text) : speakable(l.text, lang)));
+    if (!texts.some(Boolean)) throw new Error("No hay texto para leer.");
+    const outs = premium ? await synthesizePremium(texts, o.voice ?? "") : await synthesize(texts, lang);
     const rate = outs.find((x) => x.audio.length)?.sampling_rate ?? 16000;
     const parts = outs.map((x) => trim(x.audio, x.sampling_rate));
     // one file with every line, separated by a short silence
@@ -316,7 +362,9 @@ async function speakLines(
 }
 
 /** Reads the current subtitles aloud, each line at the moment it appears. */
-export async function narrateSubtitles(o: { lang?: VoiceLang; original?: OriginalAudio; volume?: number } = {}) {
+export async function narrateSubtitles(
+  o: { lang?: VoiceLang; original?: OriginalAudio; volume?: number; voice?: VoiceChoice } = {},
+) {
   const cues = [...store.get().project.cues].sort((a, b) => a.start - b.start);
   if (!cues.length) throw new Error("Primero agregá subtítulos (o escribí un texto para que la voz lo lea).");
   // join cues into phrases (the voice sounds much better reading whole sentences than 2-3 words at a time)
@@ -344,7 +392,14 @@ export async function narrateSubtitles(o: { lang?: VoiceLang; original?: Origina
  */
 export async function narrateText(
   text: string,
-  o: { start?: number; lang?: VoiceLang; original?: OriginalAudio; volume?: number; subtitles?: boolean } = {},
+  o: {
+    start?: number;
+    lang?: VoiceLang;
+    original?: OriginalAudio;
+    volume?: number;
+    voice?: VoiceChoice;
+    subtitles?: boolean;
+  } = {},
 ) {
   const clean = text.trim();
   if (!clean) throw new Error("Escribí el texto que querés que lea la voz.");

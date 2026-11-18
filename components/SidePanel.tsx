@@ -6,7 +6,7 @@ import { addFiles, addVideoSound, WHISPER_MODELS } from "@/lib/media";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { store, useEditor } from "@/lib/store";
-import { narrateSubtitles, narrateText, type OriginalAudio } from "@/lib/tts";
+import { narrateSubtitles, narrateText, voiceInfo, type OriginalAudio, type VoiceInfo } from "@/lib/tts";
 import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type SfxName, type SubtitlePreset } from "@/lib/types";
 import BrandPanel from "./BrandPanel";
 import ColorField from "./ColorField";
@@ -368,15 +368,24 @@ function VoiceSection() {
   const [text, setText] = useState("");
   const [original, setOriginal] = useState<OriginalAudio>("bajar");
   const [err, setErr] = useState("");
+  const [info, setInfo] = useState<VoiceInfo | null>(null);
+  const [voice, setVoice] = useState("free");
+  useEffect(() => {
+    voiceInfo().then((i) => {
+      setInfo(i);
+      if (i.premium && i.voices[0]) setVoice(i.voices[0].id);
+    });
+  }, []);
+  const premium = voice !== "free" && !!info?.premium;
 
   const run = async () => {
     setErr("");
     try {
       if (mode === "subs") {
-        const n = await narrateSubtitles({ original });
+        const n = await narrateSubtitles({ original, voice });
         store.set({ toast: `Listo: la voz lee ${n} frases de tus subtítulos. Dale play para escucharla.` });
       } else {
-        await narrateText(text, { start: store.get().time, original, subtitles: true });
+        await narrateText(text, { start: store.get().time, original, voice, subtitles: true });
         store.set({ toast: "Listo: voz en off agregada con sus subtítulos. Dale play para escucharla." });
       }
     } catch (e) {
@@ -413,6 +422,17 @@ function VoiceSection() {
           placeholder="Ej: ¿Buscás zapatillas cómodas? Llegó la nueva colección. Envíos a todo el país. Escribinos por WhatsApp."
         />
       )}
+      {info?.premium && (
+        <select id="voice-choice" className="input" value={voice} onChange={(e) => setVoice(e.target.value)}>
+          {info.voices.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name}
+              {v.info ? ` (${v.info})` : ""}
+            </option>
+          ))}
+          <option value="free">Voz básica gratis (suena robótica)</option>
+        </select>
+      )}
       {hasClips && (
         <select id="voice-original" className="input" value={original} onChange={(e) => setOriginal(e.target.value as OriginalAudio)}>
           <option value="bajar">Bajar el sonido del video</option>
@@ -433,7 +453,9 @@ function VoiceSection() {
             ? "Cada frase suena cuando aparece en pantalla. Si la volvés a generar, reemplaza la voz anterior."
             : "Primero generá o escribí subtítulos."
           : "Empieza donde está el cursor y también crea los subtítulos. Los precios y números se leen solos."}{" "}
-        Voz sintética gratuita (español o inglés); la primera vez se descarga a tu navegador.
+        {premium
+          ? `Voz natural: usa 1 crédito de IA cada ${info?.charsPerCredit ?? 200} letras (un video de 40 s ≈ 3 créditos).`
+          : "Voz básica gratuita (español o inglés); la primera vez se descarga a tu navegador."}
       </p>
       {err && <p className="text-xs text-red-400">{err}</p>}
     </div>

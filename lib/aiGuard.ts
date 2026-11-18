@@ -8,7 +8,8 @@ export type Usage = { used: number; limit: number };
  * Checks that the visitor may use the AI and, when `countsAsCredit`, spends one credit.
  * Returns the usage to report back, or a Response to send instead (not allowed / limit reached).
  */
-export async function guardAi(countsAsCredit: boolean): Promise<{ usage?: Usage } | Response> {
+export async function guardAi(countsAsCredit: boolean | number): Promise<{ usage?: Usage } | Response> {
+  const cost = countsAsCredit === true ? 1 : countsAsCredit === false ? 0 : Math.max(0, Math.round(countsAsCredit));
   if (!process.env.ANTHROPIC_API_KEY && !process.env.ANTHROPIC_AUTH_TOKEN) {
     return Response.json(
       {
@@ -34,17 +35,19 @@ export async function guardAi(countsAsCredit: boolean): Promise<{ usage?: Usage 
       { status: 402 },
     );
   const usage = { used: account.used, limit: account.limit };
-  if (countsAsCredit) {
-    if (account.used >= account.limit && !account.isAdmin)
+  if (cost > 0) {
+    if (account.used + cost > account.limit && !account.isAdmin)
       return Response.json(
         {
-          error: account.onTrial
+          error: account.used < account.limit
+            ? `Esto usa ${cost} créditos de IA y te quedan ${account.limit - account.used}. Probá con un texto más corto.`
+            : account.onTrial
             ? `Usaste los ${account.limit} créditos de IA de la prueba gratis. Suscríbete desde "Mi cuenta" para tener ${config.aiMonthlyLimit} por mes. Mientras tanto puedes seguir editando a mano.`
             : `Llegaste al límite de ${account.limit} créditos de IA de este mes. Se renueva el día 1. Mientras tanto puedes seguir editando a mano.`,
         },
         { status: 429 },
       );
-    usage.used = await incrementUsage(account.user.id);
+    for (let i = 0; i < cost; i++) usage.used = await incrementUsage(account.user.id);
   }
   return { usage };
 }
