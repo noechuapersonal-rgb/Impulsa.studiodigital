@@ -1,46 +1,22 @@
 import { connection } from "next/server";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { notFound, redirect } from "next/navigation";
-import { currentPeriod, getAccount, isAdminEmail, STATUS_LABELS, trialEndsAt } from "@/lib/account";
+import { redirect } from "next/navigation";
+import { currentPeriod, STATUS_LABELS, trialEndsAt } from "@/lib/account";
 import { accountsEnabled, config, formatPrice } from "@/lib/config";
-import { adminPasswordSet, isUnlocked, lock, passwordMatches, unlock } from "@/lib/adminLock";
+import { adminPasswordSet, adminSession } from "@/lib/adminLock";
 import { getAiRules, saveAiRules } from "@/lib/aiRules";
 import { supabaseAdmin } from "@/lib/supabase/server";
 
 export const metadata = { title: "Administración — Impulsa Studio" };
 
-/** Admin e-mail only (used to show the password screen). */
-async function requireAdminEmail() {
-  const account = await getAccount();
-  if (!account || !isAdminEmail(account.email)) notFound();
-  return account;
-}
-
-/** Admin e-mail AND the panel password entered in this browser. */
+/** Signed in to the panel (admin e-mail + ADMIN_PASSWORD). */
 async function requireAdmin() {
-  const account = await requireAdminEmail();
-  if (!(await isUnlocked(account.user.id))) redirect("/admin");
-  return account;
+  const email = await adminSession();
+  if (!email) redirect("/admin");
+  return email;
 }
 
-async function unlockPanel(formData: FormData) {
-  "use server";
-  const account = await requireAdminEmail();
-  if (!passwordMatches(String(formData.get("password") ?? ""))) {
-    // slow down guessing
-    await new Promise((r) => setTimeout(r, 1500));
-    redirect("/admin?clave=incorrecta");
-  }
-  await unlock(account.user.id);
-  redirect("/admin");
-}
-
-async function lockPanel() {
-  "use server";
-  await lock();
-  redirect("/cuenta");
-}
 
 async function setManual(formData: FormData) {
   "use server";
@@ -81,9 +57,8 @@ export default async function AdminPage({
 }) {
   await connection();
   if (!accountsEnabled()) redirect("/editor");
-  const account = await requireAdminEmail();
   const { q = "", guardado, opiniones, error_reglas, clave } = await searchParams;
-  if (!(await isUnlocked(account.user.id))) return <LockScreen wrong={clave === "incorrecta"} />;
+  if (!(await adminSession())) return <LockScreen wrong={clave === "incorrecta"} />;
   const onlyBad = opiniones === "malas";
 
   const admin = supabaseAdmin();
@@ -115,7 +90,7 @@ export default async function AdminPage({
           <Link href="/cuenta" className="btn">
             Mi cuenta
           </Link>
-          <form action={lockPanel}>
+          <form action="/admin/salir" method="post">
             <button className="btn">🔒 Bloquear panel</button>
           </form>
         </div>
@@ -302,12 +277,16 @@ function LockScreen({ wrong }: { wrong: boolean }) {
       <div className="panel space-y-4 rounded-2xl p-6">
         <h1 className="text-xl font-bold">🔒 Panel de administración</h1>
         {configured ? (
-          <form action={unlockPanel} className="space-y-3">
+          <form action="/admin/entrar" method="post" className="space-y-3">
             <label className="block space-y-1">
-              <span className="label block">Contraseña del panel</span>
-              <input id="password" name="password" type="password" autoFocus required className="input" autoComplete="current-password" />
+              <span className="label block">Usuario (tu mail de administrador)</span>
+              <input id="email" name="email" type="email" required className="input" autoComplete="username" />
             </label>
-            {wrong && <p className="text-sm text-red-400">Contraseña incorrecta.</p>}
+            <label className="block space-y-1">
+              <span className="label block">Contraseña</span>
+              <input id="password" name="password" type="password" required className="input" autoComplete="current-password" />
+            </label>
+            {wrong && <p className="text-sm text-red-400">Usuario o contraseña incorrectos.</p>}
             <button className="btn btn-primary w-full justify-center">Entrar</button>
           </form>
         ) : (
@@ -316,8 +295,8 @@ function LockScreen({ wrong }: { wrong: boolean }) {
             <b>ADMIN_PASSWORD</b> con la contraseña que quieras y hacé Redeploy.
           </p>
         )}
-        <Link href="/cuenta" className="block text-center text-sm text-[var(--muted)] underline">
-          Volver a mi cuenta
+        <Link href="/" className="block text-center text-sm text-[var(--muted)] underline">
+          Volver al inicio
         </Link>
       </div>
     </main>

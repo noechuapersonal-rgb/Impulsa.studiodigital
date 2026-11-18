@@ -30,7 +30,8 @@ export async function proxy(request: NextRequest) {
   } = await sb.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const protectedPage = ["/editor", "/cuenta", "/admin", "/proyectos"].some((p) => path === p || path.startsWith(`${p}/`));
+  // /admin has its own login (admin e-mail + ADMIN_PASSWORD)
+  const protectedPage = ["/editor", "/cuenta", "/proyectos"].some((p) => path === p || path.startsWith(`${p}/`));
   if (!user && protectedPage) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
