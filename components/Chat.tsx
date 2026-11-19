@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type Anthropic from "@anthropic-ai/sdk";
 import { describeProject } from "@/lib/actions";
 import { executeTool, framesForAI, storyboardTimes } from "@/lib/aiExecutor";
+import { DEFAULT_REFERENCE_PROMPT, prepareChatReference, referenceBlocks, type ChatReference } from "@/lib/chatReference";
 import { addFiles, imageThumb } from "@/lib/media";
 import { getPlayer } from "@/lib/player";
 import { store, useEditor } from "@/lib/store";
@@ -70,6 +71,25 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
   const sentImages = useRef(new Set<string>());
   const endRef = useRef<HTMLDivElement>(null);
   const hasVideo = useEditor((s) => s.project.clips.length > 0 || s.assets.length > 0);
+  const busyMsg = useEditor((s) => s.busy);
+  // reference video attached in the chat: sent once with the next instruction (and again if the
+  // conversation is restarted to keep requests small)
+  const [ref, setRef] = useState<ChatReference | null>(null);
+  const refSent = useRef(false);
+  const [refBusy, setRefBusy] = useState(false);
+
+  const attachReference = async (file: File) => {
+    setRefBusy(true);
+    try {
+      const r = await prepareChatReference(file);
+      setRef(r);
+      refSent.current = false;
+    } catch (e) {
+      push({ role: "error", text: (e as Error).message });
+    } finally {
+      setRefBusy(false);
+    }
+  };
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -86,8 +106,9 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
 
   const push = (it: UiItem) => setItems((x) => [...x, it]);
 
-  async function send(text: string) {
-    if (!text.trim() || working) return;
+  async function send(raw: string) {
+    const text = raw.trim() || (ref && !refSent.current ? DEFAULT_REFERENCE_PROMPT : "");
+    if (!text || working || refBusy) return;
     setInput("");
     push({ role: "user", text });
     setWorking(true);
@@ -126,12 +147,17 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
           /* continue without frames */
         }
       }
-      content.push({ type: "text", text });
       // keep requests under the hosting limit: when the conversation gets heavy (many images),
       // start a fresh one. Every instruction carries the full project state, so nothing is lost.
       if (history.current.length && JSON.stringify(history.current).length + JSON.stringify(content).length > MAX_BYTES) {
         history.current = [];
+        refSent.current = false;
       }
+      if (ref && !refSent.current) {
+        content.push(...referenceBlocks(ref));
+        refSent.current = true;
+      }
+      content.push({ type: "text", text });
       history.current.push({ role: "user", content });
 
       for (let step = 0; step < MAX_STEPS; step++) {
@@ -180,6 +206,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
     } catch (e) {
       // keep the conversation valid: drop this unfinished exchange
       history.current = history.current.slice(0, snapshot);
+      if (snapshot === 0 || !JSON.stringify(history.current).includes("<video_de_referencia")) refSent.current = false;
       push({ role: "error", text: (e as Error).message });
     } finally {
       setWorking(false);
@@ -277,11 +304,68 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
           send(input);
         }}
       >
+        {(ref || refBusy) && (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-1.5">
+            {ref ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ref.thumb} alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" />
+                <div className="min-w-0 flex-1 text-[11px] leading-tight">
+                  <div className="truncate font-semibold">🎬 Referencia: {ref.name}</div>
+                  <div className="text-[var(--muted)]">
+                    {refSent.current
+                      ? "La IA ya la vio. Podés seguir pidiéndole cambios."
+                      : "Escribí qué querés (o mandá vacío) y la IA arma tu video como este."}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="px-1 text-[var(--muted)] hover:text-red-400"
+                  title="Quitar referencia"
+                  onClick={() => {
+                    setRef(null);
+                    refSent.current = false;
+                  }}
+                >
+                  ✕
+                </button>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 px-1 text-[11px] text-[var(--muted)]">
+                <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+                {busyMsg ?? "Mirando el video de referencia…"}
+              </div>
+            )}
+          </div>
+        )}
         <div className="flex items-end gap-2">
+          <label
+            className={`btn h-[44px] cursor-pointer px-2.5 ${working || refBusy ? "pointer-events-none opacity-50" : ""}`}
+            title="Adjuntar un video de referencia: la IA arma tu video siguiendo su estructura y estilo"
+          >
+            🎬
+            <input
+              id="chat-reference"
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) attachReference(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
           <textarea
             className="input min-h-[44px] resize-none"
             rows={2}
-            placeholder={hasVideo ? "Ej: poné subtítulos amarillos y sacá los silencios" : "Primero subí un video (botón de arriba)"}
+            placeholder={
+              ref && !refSent.current
+                ? "Ej: hacé el mío igual que este, para mi complejo de canchas"
+                : hasVideo
+                  ? "Ej: poné subtítulos amarillos y sacá los silencios"
+                  : "Primero subí un video (botón de arriba)"
+            }
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
@@ -291,7 +375,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
               }
             }}
           />
-          <button className="btn btn-primary h-[44px]" disabled={working || !input.trim()}>
+          <button className="btn btn-primary h-[44px]" disabled={working || refBusy || (!input.trim() && !(ref && !refSent.current))}>
             ➤
           </button>
         </div>

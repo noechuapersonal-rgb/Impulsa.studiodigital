@@ -11,6 +11,8 @@ export interface VideoAnalysis {
   aspect: string;
   cuts: number;
   cutTimes: number[];
+  /** moments where something changes on screen (also partial changes: a card, a counter, a text) */
+  changes: number[];
   avgShot: number;
   thumb: string;
   frames: { t: number; data: string }[];
@@ -40,7 +42,11 @@ function seek(v: HTMLVideoElement, t: number) {
  * Looks at a reference video in the browser: duration, format, how often it cuts (scene changes)
  * and a handful of frames for the AI to describe the visual style.
  */
-export async function analyzeVideo(file: File, onProgress?: (p: number) => void): Promise<VideoAnalysis> {
+export async function analyzeVideo(
+  file: File,
+  onProgress?: (p: number) => void,
+  opts: { frames?: number; size?: number; smartFrames?: boolean } = {},
+): Promise<VideoAnalysis> {
   const url = URL.createObjectURL(file);
   const v = document.createElement("video");
   v.muted = true;
@@ -84,15 +90,36 @@ export async function analyzeVideo(file: File, onProgress?: (p: number) => void)
     const cutTimes: number[] = [];
     for (const x of diffs) if (x.d > thr && (!cutTimes.length || x.t - cutTimes[cutTimes.length - 1] > 0.4)) cutTimes.push(x.t);
 
+    // partial changes (motion graphics, cards that appear, counters): local peaks above a lower bar
+    const cbar = Math.max(0.015, median * 2.5);
+    const peaks = diffs
+      .filter((x, i) => x.d > cbar && x.d >= (diffs[i - 1]?.d ?? 0) && x.d >= (diffs[i + 1]?.d ?? 0))
+      .sort((a, b) => b.d - a.d);
+    const changes: number[] = [];
+    for (const p of peaks) if (changes.every((t) => Math.abs(t - p.t) > 0.6)) changes.push(p.t);
+    changes.sort((a, b) => a - b);
+
     // frames for the AI: the hook (first second) plus evenly spaced moments
     const big = document.createElement("canvas");
-    const s = Math.min(1, 384 / Math.max(W, H));
+    const s = Math.min(1, (opts.size ?? 384) / Math.max(W, H));
     big.width = Math.round(W * s);
     big.height = Math.round(H * s);
     const bctx = big.getContext("2d")!;
     const times = [Math.min(0.5, duration / 10)];
-    const n = 7;
-    for (let i = 1; i <= n; i++) times.push((duration * i) / (n + 1));
+    const n = opts.frames ?? 7;
+    if (opts.smartFrames && changes.length) {
+      // right after the biggest changes (so each new element is visible), then fill the gaps evenly
+      const strongest = peaks
+        .map((p) => p.t)
+        .filter((t, i, a) => a.findIndex((u) => Math.abs(u - t) <= 0.6) === i)
+        .slice(0, Math.ceil(n * 0.7));
+      for (const t of strongest) times.push(Math.min(duration - 0.05, t + 0.35));
+      for (let i = 1; times.length < n + 1 && i <= n; i++) {
+        const t = (duration * i) / (n + 1);
+        if (times.every((u) => Math.abs(u - t) > duration / (n * 2))) times.push(t);
+      }
+      times.sort((a, b) => a - b);
+    } else for (let i = 1; i <= n; i++) times.push((duration * i) / (n + 1));
     const frames: { t: number; data: string }[] = [];
     for (const t of times) {
       await seek(v, t);
@@ -116,6 +143,7 @@ export async function analyzeVideo(file: File, onProgress?: (p: number) => void)
       aspect: aspectLabel(W, H),
       cuts: cutTimes.length,
       cutTimes,
+      changes,
       avgShot: duration / (cutTimes.length + 1),
       thumb: tc.toDataURL("image/jpeg", 0.7),
       frames,
