@@ -1,6 +1,6 @@
 "use client";
 
-import { idbPut, MEDIA, persistStorage } from "./idb";
+import { idbDelete, idbPut, MEDIA, persistStorage } from "./idb";
 import { getPlayer } from "./player";
 import { fmt, nextPhotoSlot, totalDuration, uid } from "./project";
 import { store } from "./store";
@@ -383,4 +383,45 @@ export async function addVideoSound(file: File, opts: { replace: boolean }) {
   } finally {
     store.set({ busy: null });
   }
+}
+
+/** How many places of the edit use a file (video clips, photos, music…). */
+export function assetUses(id: string): number {
+  const p = store.get().project;
+  return (
+    p.clips.filter((c) => c.assetId === id).length +
+    p.overlays.filter((o) => o.assetId === id).length +
+    p.audio.filter((a) => a.assetId === id).length
+  );
+}
+
+/**
+ * Removes an uploaded file from "Medios" and everything in the video that uses it. It cannot be
+ * undone (the undo history would bring back pieces whose file is gone, so it is cleared).
+ */
+export function removeAsset(id: string) {
+  const a = store.get().assets.find((x) => x.id === id);
+  if (!a) return;
+  const used = assetUses(id) > 0;
+  store.set((s) => {
+    const project = used
+      ? {
+          ...s.project,
+          clips: s.project.clips.filter((c) => c.assetId !== id),
+          overlays: s.project.overlays.filter((o) => o.assetId !== id),
+          audio: s.project.audio.filter((x) => x.assetId !== id),
+        }
+      : s.project;
+    return {
+      project,
+      assets: s.assets.filter((x) => x.id !== id),
+      selection: null,
+      past: used ? [] : s.past,
+      future: used ? [] : s.future,
+      time: Math.min(s.time, Math.max(0, totalDuration(project))),
+    };
+  });
+  getPlayer()?.seek(store.get().time);
+  idbDelete(MEDIA, id).catch(() => undefined);
+  store.set({ toast: `«${a.name}» se borró de Medios.` });
 }

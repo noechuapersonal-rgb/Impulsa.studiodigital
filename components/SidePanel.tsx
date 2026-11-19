@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import * as A from "@/lib/actions";
-import { addFiles, addVideoSound, WHISPER_MODELS } from "@/lib/media";
+import { addFiles, addVideoSound, assetUses, removeAsset, WHISPER_MODELS } from "@/lib/media";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { store, useEditor } from "@/lib/store";
@@ -80,6 +80,7 @@ export default function SidePanel({ mobile = false }: { mobile?: boolean }) {
 function MediaTab() {
   const assets = useEditor((s) => s.assets);
   const [soundFor, setSoundFor] = useState<string | null>(null);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const fit = useEditor((s) => s.project.fit);
   return (
     <div className="space-y-3">
@@ -141,6 +142,36 @@ function MediaTab() {
               {a.kind === "audio" && <span className="text-3xl">♪</span>}
               {a.duration > 0 && (
                 <span className="absolute right-1 bottom-1 rounded bg-black/70 px-1 text-[10px]">{fmt(a.duration)}</span>
+              )}
+              <button
+                className="absolute top-1 right-1 grid h-6 w-6 place-items-center rounded-full bg-black/75 text-[11px] text-white hover:bg-red-500"
+                title="Borrar de Medios"
+                onClick={() => setConfirmDel(a.id)}
+              >
+                🗑
+              </button>
+              {confirmDel === a.id && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 bg-black/85 p-1.5 text-center">
+                  <span className="text-[11px] leading-tight text-white">
+                    {assetUses(a.id)
+                      ? `¿Borrar? También se quita del video (${assetUses(a.id)} ${assetUses(a.id) === 1 ? "lugar" : "lugares"}) y no se puede deshacer.`
+                      : "¿Borrar este archivo?"}
+                  </span>
+                  <div className="flex gap-1.5">
+                    <button
+                      className="rounded bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white"
+                      onClick={() => {
+                        removeAsset(a.id);
+                        setConfirmDel(null);
+                      }}
+                    >
+                      Borrar
+                    </button>
+                    <button className="rounded bg-white/15 px-2 py-0.5 text-[11px] text-white" onClick={() => setConfirmDel(null)}>
+                      No
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
             <div className="truncate px-2 pt-1 text-[11px]" title={a.name}>
