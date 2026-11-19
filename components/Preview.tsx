@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { addFiles } from "@/lib/media";
 import { getPlayer, Player, setPlayer } from "@/lib/player";
 import AddMenu from "./AddMenu";
+import VoiceRecorder from "./VoiceRecorder";
 import { canvasSize, contentDuration, fmt } from "@/lib/project";
 import { overlayBounds } from "@/lib/render";
 import { store, useEditor } from "@/lib/store";
@@ -244,12 +245,13 @@ export default function Preview() {
           {playing ? "❚❚" : "▶"}
         </button>
         <AddMenu />
-        <span className="font-mono text-sm tabular-nums">
+        <VoiceRecorder />
+        <span className="font-mono text-xs whitespace-nowrap tabular-nums sm:text-sm">
           {fmt(time)} <span className="text-[var(--muted)]">/ {fmt(duration)}</span>
         </span>
         <div className="flex-1" />
         {!big && (
-          <span className="hidden text-xs text-[var(--muted)] lg:inline">
+          <span className="hidden text-xs text-[var(--muted)] 2xl:inline">
             Espacio: reproducir · S: dividir clip · Supr: borrar · ←/→: mover · F: pantalla completa
           </span>
         )}
