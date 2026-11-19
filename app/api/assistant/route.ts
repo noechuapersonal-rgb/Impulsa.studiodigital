@@ -12,6 +12,11 @@ const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-5-5";
 
 let client: Anthropic | null = null;
 
+// Models with preserved thinking: their reasoning blocks are tied to the exact conversation that
+// produced them. If anything earlier changes (a new deploy with updated instructions, edited AI
+// rules), drop those old blocks instead of failing the request.
+const BOUND_THINKING = /claude-(haiku|sonnet|opus)-5-5|claude-(fable|mythos)-5-[12]/.test(MODEL);
+
 export async function POST(req: Request) {
   let body: { messages?: Anthropic.Beta.BetaMessageParam[] };
   try {
@@ -38,6 +43,12 @@ export async function POST(req: Request) {
   try {
     const stream = client.beta.messages.stream({
       model: MODEL,
+      ...(BOUND_THINKING
+        ? {
+            betas: ["thinking-binding-controls-2026-08-01"],
+            thinking: { type: "adaptive" as const, block_binding: { prefix_mismatch_behavior: "drop_block" as const } },
+          }
+        : {}),
       max_tokens: 32000,
       // a bit more thinking gives noticeably better editing judgment at a small extra cost
       output_config: { effort: "high" },

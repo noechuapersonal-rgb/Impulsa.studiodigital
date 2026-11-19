@@ -211,12 +211,25 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
           push({ role: "error", text: "La instrucción se hizo demasiado larga. Pedila de nuevo en partes más chicas." });
           break;
         }
-        const res = await fetch("/api/assistant", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: history.current }),
-        });
-        const data = await res.json();
+        const ask = () =>
+          fetch("/api/assistant", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: history.current }),
+          });
+        let res = await ask();
+        let data = await res.json();
+        // the AI's earlier reasoning no longer matches the conversation (e.g. the app was updated
+        // meanwhile): forget that reasoning and try once more
+        if (res.status === 400 && /thinking/i.test(String(data.error ?? ""))) {
+          history.current = history.current.map((m) => {
+            if (m.role !== "assistant" || !Array.isArray(m.content)) return m;
+            const kept = m.content.filter((b) => b.type !== "thinking" && b.type !== "redacted_thinking");
+            return { ...m, content: kept.length ? kept : [{ type: "text" as const, text: "…" }] };
+          });
+          res = await ask();
+          data = await res.json();
+        }
         if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
         if (data.usage) setUsage(data.usage);
         const blocks: Block[] = data.content;
