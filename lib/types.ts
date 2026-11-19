@@ -183,9 +183,19 @@ export interface Project {
   font?: string;
   /** default background color for label / call-to-action texts (brand color) */
   brandColor?: string;
+  /** which of the client's brands this video is for (missing = none chosen) */
+  brandId?: string;
+}
+
+/** Every brand of an account plus the style references (shared by all brands). */
+export interface BrandLibrary {
+  brands: BrandKit[];
+  references: StyleRef[];
 }
 
 export interface BrandKit {
+  /** id inside the client's brand library (one account can manage several brands) */
+  id?: string;
   name: string;
   description: string; // qué vende, a quién, tono
   tone: string;

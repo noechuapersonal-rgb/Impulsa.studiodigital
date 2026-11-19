@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { emptyProject } from "./project";
-import type { Asset, AssetMeta, BrandKit, Project, Segment, Selection } from "./types";
+import type { Asset, AssetMeta, BrandKit, Project, Segment, Selection, StyleRef } from "./types";
 
 export interface EditorState {
   project: Project;
@@ -12,7 +12,12 @@ export interface EditorState {
   time: number;
   playing: boolean;
   busy: string | null; // long-running task message
+  /** brand of the open project (one of `brands`), or null when none was chosen */
   brand: BrandKit | null;
+  /** every brand saved by the client */
+  brands: BrandKit[];
+  /** style references (Referencias tab), shared by all brands */
+  refs: StyleRef[];
   /** ids of the style references chosen for the current video */
   activeRefs: string[];
   /** when set, the next tap on the video preview picks a color for this field */
@@ -38,6 +43,8 @@ let state: EditorState = {
   playing: false,
   busy: null,
   brand: null,
+  brands: [],
+  refs: [],
   activeRefs: [],
   eyedropper: null,
   projectId: null,

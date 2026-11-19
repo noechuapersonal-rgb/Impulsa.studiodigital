@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { deleteSelection, setFormat } from "@/lib/actions";
-import { loadBrand, loadFont } from "@/lib/brand";
+import { loadFont, loadLibrary } from "@/lib/brand";
 import { getPlayer } from "@/lib/player";
 import { openProject, saveCurrentProject } from "@/lib/projects";
 import { splitClipAt } from "@/lib/project";
@@ -142,12 +142,20 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
   }, []);
 
   useEffect(() => {
-    loadBrand().then((brand) => {
-      if (!brand) return;
-      store.set({ brand });
-      loadFont(brand.font, brand.fonts ?? []);
-    });
+    loadLibrary().then((lib) => store.set({ brands: lib.brands, refs: lib.references }));
   }, []);
+
+  // the brand of the open project (each project can be for a different brand)
+  const brandId = useEditor((s) => s.project.brandId);
+  const brands = useEditor((s) => s.brands);
+  useEffect(() => {
+    const b = brandId ? (brands.find((x) => x.id === brandId) ?? null) : null;
+    store.set({ brand: b });
+    if (b) {
+      loadFont(b.font, b.fonts ?? []);
+      if (b.titleFont) loadFont(b.titleFont, b.fonts ?? []);
+    }
+  }, [brandId, brands]);
 
   // the video's typography (also when opening a saved project); re-render once it is ready
   const projectFont = useEditor((s) => s.project.font);

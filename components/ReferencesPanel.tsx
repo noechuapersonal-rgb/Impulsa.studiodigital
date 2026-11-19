@@ -10,7 +10,7 @@ import Field from "./Field";
 const EMPTY: StyleRef[] = [];
 
 export default function ReferencesPanel() {
-  const refs = useEditor((s) => s.brand?.references ?? EMPTY);
+  const refs = useEditor((s) => s.refs ?? EMPTY);
   const active = useEditor((s) => s.activeRefs);
   const hasVideo = useEditor((s) => s.project.clips.length > 0);
   const [file, setFile] = useState<File | null>(null);

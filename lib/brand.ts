@@ -3,7 +3,7 @@
 import { addFiles } from "./media";
 import { totalDuration, uid } from "./project";
 import { store } from "./store";
-import type { BrandKit, CustomFont } from "./types";
+import type { BrandKit, BrandLibrary, CustomFont, StyleRef } from "./types";
 
 /** Google Fonts offered for the brand (weights that each family really has). */
 export const BRAND_FONTS: { name: string; weights: string; style: string }[] = [
@@ -154,44 +154,124 @@ export function emptyBrand(): BrandKit {
   };
 }
 
-const LS_KEY = "impulsa-brand";
+const LS_KEY = "impulsa-brands";
+const LEGACY_LS_KEY = "impulsa-brand";
 
-export async function loadBrand(): Promise<BrandKit | null> {
-  try {
-    const res = await fetch("/api/brand");
-    if (res.ok) {
-      const { brand } = await res.json();
-      if (brand) return { ...emptyBrand(), ...brand };
-    }
-  } catch {
-    /* fall back to this browser */
+/** Accepts the stored data in its old shape (a single brand) or the new one (a library of brands). */
+export function normalizeLibrary(data: unknown): BrandLibrary {
+  const d = (data ?? {}) as Partial<BrandLibrary> & Partial<BrandKit>;
+  if (Array.isArray(d.brands)) {
+    return {
+      brands: d.brands.map((b, i) => ({ ...emptyBrand(), ...b, id: b.id || `marca-${i + 1}`, references: undefined })),
+      references: Array.isArray(d.references) ? d.references : [],
+    };
   }
+  // old shape: one brand kit with its references inside
+  const legacy = d as Partial<BrandKit>;
+  const has = !!(legacy.name || legacy.logo || legacy.description);
+  return {
+    brands: has ? [{ ...emptyBrand(), ...legacy, id: "marca-1", references: undefined }] : [],
+    references: Array.isArray(legacy.references) ? legacy.references : [],
+  };
+}
+
+function localLibrary(): BrandLibrary | null {
   try {
-    const raw = localStorage.getItem(LS_KEY);
-    return raw ? { ...emptyBrand(), ...JSON.parse(raw) } : null;
+    const raw = localStorage.getItem(LS_KEY) ?? localStorage.getItem(LEGACY_LS_KEY);
+    return raw ? normalizeLibrary(JSON.parse(raw)) : null;
   } catch {
     return null;
   }
 }
 
-/** Saves to the account (or to this browser when accounts are not set up). Returns where it was saved. */
-export async function saveBrand(brand: BrandKit): Promise<"cuenta" | "navegador"> {
+function saveLocal() {
   try {
-    localStorage.setItem(LS_KEY, JSON.stringify(brand));
+    const s = store.get();
+    localStorage.setItem(LS_KEY, JSON.stringify({ brands: s.brands, references: s.refs }));
   } catch {
     /* storage full or blocked */
   }
+}
+
+/** Loads every brand of the client (account first, then this browser). */
+export async function loadLibrary(): Promise<BrandLibrary> {
+  try {
+    const res = await fetch("/api/brand");
+    if (res.ok) {
+      const { library } = await res.json();
+      if (library) return normalizeLibrary(library);
+    }
+  } catch {
+    /* fall back to this browser */
+  }
+  return localLibrary() ?? { brands: [], references: [] };
+}
+
+async function put(body: unknown): Promise<"cuenta" | "navegador"> {
+  saveLocal();
   try {
     const res = await fetch("/api/brand", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ brand }),
+      body: JSON.stringify(body),
     });
     if (res.ok) return "cuenta";
   } catch {
     /* offline */
   }
   return "navegador";
+}
+
+/** Saves one brand (adds it, or replaces the one with the same id). Returns where it was saved. */
+export async function saveBrand(brand: BrandKit): Promise<"cuenta" | "navegador"> {
+  const b = { ...brand, id: brand.id || uid(), references: undefined };
+  store.set((s) => ({
+    brands: s.brands.some((x) => x.id === b.id) ? s.brands.map((x) => (x.id === b.id ? b : x)) : [...s.brands, b],
+    brand: s.brand?.id === b.id ? b : s.brand,
+  }));
+  return put({ brand: b });
+}
+
+export async function deleteBrand(id: string) {
+  store.set((s) => ({
+    brands: s.brands.filter((x) => x.id !== id),
+    brand: s.brand?.id === id ? null : s.brand,
+    project: s.project.brandId === id ? { ...s.project, brandId: undefined } : s.project,
+  }));
+  saveLocal();
+  try {
+    await fetch(`/api/brand?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+  } catch {
+    /* offline */
+  }
+}
+
+export async function saveRefs(references: StyleRef[]) {
+  store.set({ refs: references });
+  return put({ references });
+}
+
+/** Chooses the brand of the open project (null = none). */
+export function chooseProjectBrand(id: string | null) {
+  store.set((s) => ({
+    project: { ...s.project, brandId: id ?? undefined },
+    brand: id ? (s.brands.find((b) => b.id === id) ?? null) : null,
+  }));
+}
+
+/** Finds a saved brand by name (ignores case, accents and extra spaces). */
+export function findBrandByName(name: string): BrandKit | undefined {
+  const norm = (x: string) =>
+    x
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  const n = norm(name);
+  if (!n) return undefined;
+  const all = store.get().brands;
+  return all.find((b) => norm(b.name) === n) ?? all.find((b) => norm(b.name).includes(n) || n.includes(norm(b.name)));
 }
 
 /** Shrinks an uploaded logo to a PNG data URL (max 512px) so it can be stored with the brand. */
@@ -274,7 +354,12 @@ export async function applyBrand(
 
 /** Short text for the AI describing the brand. */
 export function describeBrand(b: BrandKit | null): string {
-  if (!b || !(b.name || b.description)) return "Kit de marca: (no configurado)";
+  if (!b || !(b.name || b.description)) {
+    const names = store.get().brands.map((x) => `"${x.name}"`).filter((x) => x !== '""');
+    return names.length
+      ? `Marca de este proyecto: ninguna elegida. Marcas guardadas del cliente: ${names.join(", ")}. No uses datos de ninguna marca salvo que el cliente diga para cuál es el video: entonces elígela con select_brand. Si el pedido necesita datos de marca (logo, contacto, colores) y no está claro, pregunta para qué marca es.`
+      : "Kit de marca: (no configurado)";
+  }
   const L = [
     `Kit de marca: "${b.name}"`,
     b.description && `  Qué hace / público: ${b.description}`,

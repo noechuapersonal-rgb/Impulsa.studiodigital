@@ -71,8 +71,8 @@ export default function PublishPanel() {
       </p>
       {!brand?.name && (
         <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-200">
-          Consejo: completa tu <b>Kit de marca</b> (pestaña 🎨 Marca) para que el texto use tu tono, tus datos de contacto y
-          tus hashtags.
+          Consejo: elegí en la pestaña <b>🎨 Marca</b> para qué marca es este video, así el texto usa su tono, sus datos de
+          contacto y sus hashtags.
         </p>
       )}
       <Field label="¿Dónde lo vas a publicar?">

@@ -1,6 +1,6 @@
 "use client";
 
-import { emptyBrand, saveBrand } from "./brand";
+import { saveRefs } from "./brand";
 import { store } from "./store";
 import type { StyleRef } from "./types";
 
@@ -153,11 +153,9 @@ export async function analyzeVideo(
   }
 }
 
-/** Saves the reference list together with the brand kit (same storage). */
+/** Saves the reference list (shared by all the client's brands). */
 export async function saveReferences(refs: StyleRef[]) {
-  const brand = { ...(store.get().brand ?? emptyBrand()), references: refs };
-  store.set({ brand });
-  return saveBrand(brand);
+  return saveRefs(refs);
 }
 
 export function chatSend(text: string) {
@@ -167,7 +165,7 @@ export function chatSend(text: string) {
 /** Text for the AI about the references chosen for this video. */
 export function describeActiveRefs(): string {
   const s = store.get();
-  const refs = (s.brand?.references ?? []).filter((r) => s.activeRefs.includes(r.id));
+  const refs = s.refs.filter((r) => s.activeRefs.includes(r.id));
   if (!refs.length) return "";
   return [
     "Referencias de estilo elegidas por el cliente para este video (imita su estilo con las herramientas disponibles):",

@@ -286,6 +286,16 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
     },
   },
   {
+    name: "select_brand",
+    description:
+      "Elige para qué marca del cliente es este video, por su nombre (el cliente puede manejar varias marcas). Úsalo cuando diga para qué marca o negocio es el video. Devuelve los datos de esa marca.",
+    input_schema: {
+      type: "object",
+      properties: { name: { type: "string", description: "Nombre de la marca" } },
+      required: ["name"],
+    },
+  },
+  {
     name: "apply_brand",
     description:
       "Aplica el kit de marca del cliente al video: su tipografía y colores en textos y subtítulos, y (si tiene) su logo en una esquina durante todo el video. Úsalo cuando pidan 'pon mi marca', 'mi logo', 'mis colores', o al armar un video para su negocio.",
@@ -393,6 +403,7 @@ export const SYSTEM_PROMPT = `Eres el editor de video con IA de "Impulsa Studio"
 - Menos es más: pocos efectos bien puestos se ven profesionales; muchos se ven amateurs. Evita filtros fuertes salvo que los pidan.
 
 ## Marca y referencias
+- El cliente puede manejar VARIAS marcas: usa solo la marca elegida para este proyecto (el estado lo indica). Si no hay ninguna elegida, no inventes ni mezcles datos de otra marca: si el cliente dice para quién es el video, llama a select_brand; si hace falta y no lo dijo, pregúntale.
 - Si hay kit de marca, úsalo: aplica la marca cuando el video sea para el negocio y usa sus frases, tono y datos de contacto reales.
 - Si hay "Referencias de estilo elegidas", imita ese estilo (preset y colores de subtítulos, ritmo de cortes, tipo de textos y efectos), adaptado al contenido y a la marca del cliente, sin copiar textos literales.
 

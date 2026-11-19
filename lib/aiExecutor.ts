@@ -1,7 +1,7 @@
 "use client";
 
 import * as A from "./actions";
-import { applyBrand } from "./brand";
+import { applyBrand, chooseProjectBrand, describeBrand, findBrandByName } from "./brand";
 import { WHISPER_MODELS } from "./media";
 import { getPlayer } from "./player";
 import { totalDuration } from "./project";
@@ -130,10 +130,24 @@ export async function executeTool(name: string, input: Input): Promise<ToolOutpu
     case "set_video_volume":
       A.setVideoVolume(Number(input.volume ?? 1));
       return "Volumen actualizado.";
+    case "select_brand": {
+      const name = String(input.name ?? "");
+      const b = findBrandByName(name);
+      if (!b) {
+        const names = store.get().brands.map((x) => `"${x.name}"`).join(", ");
+        return names
+          ? `No hay una marca guardada llamada "${name}". Marcas guardadas: ${names}. Si es una marca nueva, el cliente la crea en la pestaña 🎨 Marca.`
+          : "El cliente no tiene marcas guardadas. Puede crearlas en la pestaña 🎨 Marca.";
+      }
+      chooseProjectBrand(b.id!);
+      return `Marca del proyecto: "${b.name}".\n${describeBrand(b)}`;
+    }
     case "apply_brand": {
       const brand = store.get().brand;
       if (!brand?.name && !brand?.logo)
-        return "El cliente todavía no cargó su kit de marca. Pídele que lo complete en la pestaña 🎨 Marca.";
+        return store.get().brands.length
+          ? `Este proyecto no tiene marca elegida. Marcas guardadas: ${store.get().brands.map((b) => `"${b.name}"`).join(", ")}. Pregúntale al cliente para cuál es (o usa select_brand si ya lo dijo).`
+          : "El cliente todavía no cargó ninguna marca. Pídele que la cree en la pestaña 🎨 Marca.";
       await applyBrand(brand, {
         logo: input.include_logo !== false,
         logoPosition: (["top-left", "top-right", "bottom-left", "bottom-right"] as const).find((x) => x === input.logo_position),
