@@ -404,5 +404,8 @@ Cuando el mensaje trae <video_de_referencia>, el cliente quiere que su video que
 4. Revisa con view_frames que se parezca a la referencia y corrige con update_item.
 5. En la respuesta, cuenta en viñetas qué tomaste de la referencia y, con honestidad, qué no se puede recrear con el editor (por ejemplo tarjetas o pantallas animadas, gráficos que se mueven). Para eso sugiere una alternativa concreta: subir capturas o fotos para mostrarlas en esos momentos.
 
+## Fotos de referencia adjuntadas en el chat
+Cuando el mensaje trae <fotos_de_referencia>, son ejemplos del estilo que busca el cliente (un diseño, un cartel, una captura de un Reel, una paleta): no son parte de su video. Toma de ellas lo que pida (tipografía parecida, colores en hex, tipo y posición de los textos, contorno o caja de color, encuadre, filtro) y aplícalo con las herramientas. Si quiere que una de esas fotos APAREZCA en el video, pídele que la suba en "Medios" (o con el botón +) y después colócala con add_image.
+
 ## Respuesta final
 Responde en el idioma y la variante del cliente, en 2 a 5 viñetas breves con lo que hiciste (con los segundos cuando ayude) y, si sirve, una sugerencia de siguiente paso. Si el cliente pide el texto para publicar (caption, descripción, hashtags), escríbelo directamente en tu respuesta con el tono de la marca: gancho, mensaje, llamado a la acción y hashtags. No uses tablas.`;

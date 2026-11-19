@@ -4,9 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import type Anthropic from "@anthropic-ai/sdk";
 import { describeProject } from "@/lib/actions";
 import { executeTool, framesForAI, storyboardTimes } from "@/lib/aiExecutor";
-import { DEFAULT_REFERENCE_PROMPT, prepareChatReference, referenceBlocks, type ChatReference } from "@/lib/chatReference";
+import { photoForAI } from "@/lib/brand";
+import {
+  DEFAULT_PHOTOS_PROMPT,
+  DEFAULT_REFERENCE_PROMPT,
+  prepareChatReference,
+  referenceBlocks,
+  type ChatReference,
+} from "@/lib/chatReference";
 import { addFiles, imageThumb } from "@/lib/media";
 import { getPlayer } from "@/lib/player";
+import { uid } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 
 type Msg = Anthropic.Beta.BetaMessageParam;
@@ -54,6 +62,12 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 const MAX_STEPS = 14;
+const MAX_REF_IMAGES = 6;
+
+type Attachment = { id: string; name: string; thumb: string; sent: boolean } & (
+  | { kind: "video"; video: ChatReference }
+  | { kind: "image"; data: string }
+);
 // request size budget (Vercel accepts ~4.5 MB per request)
 const MAX_BYTES = 3_200_000;
 
@@ -72,18 +86,40 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
   const endRef = useRef<HTMLDivElement>(null);
   const hasVideo = useEditor((s) => s.project.clips.length > 0 || s.assets.length > 0);
   const busyMsg = useEditor((s) => s.busy);
-  // reference video attached in the chat: sent once with the next instruction (and again if the
-  // conversation is restarted to keep requests small)
-  const [ref, setRef] = useState<ChatReference | null>(null);
-  const refSent = useRef(false);
+  // references attached in the chat (a video and/or photos): sent once with the next instruction,
+  // and again if the conversation is restarted to keep requests small
+  const [atts, setAtts] = useState<Attachment[]>([]);
+  const attsRef = useRef<Attachment[]>([]);
+  const updateAtts = (f: (x: Attachment[]) => Attachment[]) => {
+    attsRef.current = f(attsRef.current);
+    setAtts(attsRef.current);
+  };
   const [refBusy, setRefBusy] = useState(false);
+  const pendingAtts = atts.filter((x) => !x.sent);
 
-  const attachReference = async (file: File) => {
+  const attach = async (files: File[]) => {
     setRefBusy(true);
     try {
-      const r = await prepareChatReference(file);
-      setRef(r);
-      refSent.current = false;
+      for (const file of files) {
+        if (file.type.startsWith("image/") || /\.(jpe?g|png|webp|gif|heic)$/i.test(file.name)) {
+          if (attsRef.current.filter((x) => x.kind === "image").length >= MAX_REF_IMAGES) {
+            push({ role: "error", text: `Podés adjuntar hasta ${MAX_REF_IMAGES} fotos de referencia.` });
+            continue;
+          }
+          const data = await photoForAI(file, 1024);
+          updateAtts((x) => [
+            ...x,
+            { id: uid(), kind: "image", name: file.name, thumb: `data:image/jpeg;base64,${data}`, data, sent: false },
+          ]);
+        } else {
+          const video = await prepareChatReference(file);
+          // one reference video at a time: a new one replaces the previous
+          updateAtts((x) => [
+            ...x.filter((y) => y.kind !== "video"),
+            { id: uid(), kind: "video", name: file.name, thumb: video.thumb, video, sent: false },
+          ]);
+        }
+      }
     } catch (e) {
       push({ role: "error", text: (e as Error).message });
     } finally {
@@ -91,24 +127,19 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
     }
   };
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [items]);
-
-  // other panels (e.g. "Editar con este estilo") can send a message to the assistant
-  const sendRef = useRef<(t: string) => void>(() => undefined);
-  sendRef.current = (t) => void send(t);
-  useEffect(() => {
-    const on = (e: Event) => sendRef.current((e as CustomEvent<string>).detail);
-    window.addEventListener("impulsa-chat", on);
-    return () => window.removeEventListener("impulsa-chat", on);
-  }, []);
-
   const push = (it: UiItem) => setItems((x) => [...x, it]);
 
   async function send(raw: string) {
-    const text = raw.trim() || (ref && !refSent.current ? DEFAULT_REFERENCE_PROMPT : "");
+    const pending = attsRef.current.filter((x) => !x.sent);
+    const text =
+      raw.trim() ||
+      (pending.some((x) => x.kind === "video")
+        ? DEFAULT_REFERENCE_PROMPT
+        : pending.length
+          ? DEFAULT_PHOTOS_PROMPT
+          : "");
     if (!text || working || refBusy) return;
+    const sentNow: string[] = [];
     setInput("");
     push({ role: "user", text });
     setWorking(true);
@@ -151,12 +182,26 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
       // start a fresh one. Every instruction carries the full project state, so nothing is lost.
       if (history.current.length && JSON.stringify(history.current).length + JSON.stringify(content).length > MAX_BYTES) {
         history.current = [];
-        refSent.current = false;
+        updateAtts((x) => x.map((y) => ({ ...y, sent: false })));
       }
-      if (ref && !refSent.current) {
-        content.push(...referenceBlocks(ref));
-        refSent.current = true;
+      const toSend = attsRef.current.filter((x) => !x.sent);
+      const video = toSend.find((x) => x.kind === "video");
+      if (video && video.kind === "video") content.push(...referenceBlocks(video.video));
+      const photos = toSend.filter((x) => x.kind === "image");
+      if (photos.length) {
+        content.push({
+          type: "text",
+          text: `<fotos_de_referencia>\nEl cliente adjuntó ${photos.length === 1 ? "esta foto" : `estas ${photos.length} fotos`} como REFERENCIA (no forman parte de su video): úsalas para entender el estilo que busca (textos, tipografías, colores, composición, encuadre, filtros) y lo que pide en su mensaje.`,
+        });
+        for (const ph of photos)
+          if (ph.kind === "image") {
+            content.push({ type: "text", text: `Foto de referencia "${ph.name}":` });
+            content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: ph.data } });
+          }
+        content.push({ type: "text", text: "</fotos_de_referencia>" });
       }
+      sentNow.push(...toSend.map((x) => x.id));
+      if (sentNow.length) updateAtts((x) => x.map((y) => (sentNow.includes(y.id) ? { ...y, sent: true } : y)));
       content.push({ type: "text", text });
       history.current.push({ role: "user", content });
 
@@ -206,7 +251,8 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
     } catch (e) {
       // keep the conversation valid: drop this unfinished exchange
       history.current = history.current.slice(0, snapshot);
-      if (snapshot === 0 || !JSON.stringify(history.current).includes("<video_de_referencia")) refSent.current = false;
+      // the references of this message were not delivered: send them again next time
+      if (sentNow.length) updateAtts((x) => x.map((y) => (sentNow.includes(y.id) ? { ...y, sent: false } : y)));
       push({ role: "error", text: (e as Error).message });
     } finally {
       setWorking(false);
@@ -304,54 +350,58 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
           send(input);
         }}
       >
-        {(ref || refBusy) && (
-          <div className="mb-2 flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-1.5">
-            {ref ? (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={ref.thumb} alt="" className="h-10 w-10 shrink-0 rounded-md object-cover" />
-                <div className="min-w-0 flex-1 text-[11px] leading-tight">
-                  <div className="truncate font-semibold">🎬 Referencia: {ref.name}</div>
-                  <div className="text-[var(--muted)]">
-                    {refSent.current
-                      ? "La IA ya la vio. Podés seguir pidiéndole cambios."
-                      : "Escribí qué querés (o mandá vacío) y la IA arma tu video como este."}
+        {(atts.length > 0 || refBusy) && (
+          <div className="mb-2 space-y-1.5 rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-1.5">
+            {atts.length > 0 && (
+              <div className="scroll-thin flex gap-1.5 overflow-x-auto">
+                {atts.map((x) => (
+                  <div key={x.id} className="relative shrink-0" title={x.name}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={x.thumb} alt={x.name} className={`h-12 w-12 rounded-md object-cover ${x.sent ? "opacity-60" : ""}`} />
+                    {x.kind === "video" && (
+                      <span className="absolute bottom-0.5 left-0.5 rounded bg-black/70 px-1 text-[9px] text-white">🎬 video</span>
+                    )}
+                    <button
+                      type="button"
+                      className="absolute -top-1 -right-1 grid h-4 w-4 place-items-center rounded-full bg-black/80 text-[9px] text-white hover:bg-red-500"
+                      title="Quitar"
+                      onClick={() => updateAtts((l) => l.filter((y) => y.id !== x.id))}
+                    >
+                      ✕
+                    </button>
                   </div>
-                </div>
-                <button
-                  type="button"
-                  className="px-1 text-[var(--muted)] hover:text-red-400"
-                  title="Quitar referencia"
-                  onClick={() => {
-                    setRef(null);
-                    refSent.current = false;
-                  }}
-                >
-                  ✕
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center gap-2 px-1 text-[11px] text-[var(--muted)]">
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
-                {busyMsg ?? "Mirando el video de referencia…"}
+                ))}
               </div>
             )}
+            <div className="flex items-center gap-2 px-0.5 text-[11px] text-[var(--muted)]">
+              {refBusy ? (
+                <>
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+                  {busyMsg ?? "Preparando la referencia…"}
+                </>
+              ) : pendingAtts.length ? (
+                "Referencias listas: escribí qué querés (o mandá vacío) y la IA las usa."
+              ) : (
+                "La IA ya vio estas referencias. Podés seguir pidiéndole cambios."
+              )}
+            </div>
           </div>
         )}
         <div className="flex items-end gap-2">
           <label
             className={`btn h-[44px] cursor-pointer px-2.5 ${working || refBusy ? "pointer-events-none opacity-50" : ""}`}
-            title="Adjuntar un video de referencia: la IA arma tu video siguiendo su estructura y estilo"
+            title="Adjuntar referencias: un video o fotos con el estilo que te gusta"
           >
-            🎬
+            📎
             <input
               id="chat-reference"
               type="file"
-              accept="video/*"
+              accept="video/*,image/*"
+              multiple
               className="hidden"
               onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) attachReference(f);
+                const fs = Array.from(e.target.files ?? []);
+                if (fs.length) attach(fs);
                 e.target.value = "";
               }}
             />
@@ -360,8 +410,8 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
             className="input min-h-[44px] resize-none"
             rows={2}
             placeholder={
-              ref && !refSent.current
-                ? "Ej: hacé el mío igual que este, para mi complejo de canchas"
+              pendingAtts.length
+                ? "Ej: hacé el mío con este estilo, para mi complejo de canchas"
                 : hasVideo
                   ? "Ej: poné subtítulos amarillos y sacá los silencios"
                   : "Primero subí un video (botón de arriba)"
@@ -375,7 +425,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
               }
             }}
           />
-          <button className="btn btn-primary h-[44px]" disabled={working || refBusy || (!input.trim() && !(ref && !refSent.current))}>
+          <button className="btn btn-primary h-[44px]" disabled={working || refBusy || (!input.trim() && !pendingAtts.length)}>
             ➤
           </button>
         </div>

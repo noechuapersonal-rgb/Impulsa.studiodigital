@@ -93,3 +93,6 @@ export function referenceBlocks(r: ChatReference) {
 
 export const DEFAULT_REFERENCE_PROMPT =
   "Editá mi video siguiendo este video de referencia: la misma estructura, ritmo, tipo de textos y subtítulos, adaptado a mi contenido.";
+
+export const DEFAULT_PHOTOS_PROMPT =
+  "Usá estas fotos como referencia y editá mi video con ese estilo (textos, tipografías, colores y encuadre).";
