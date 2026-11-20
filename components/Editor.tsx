@@ -99,6 +99,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
         s.assets !== last.assets ||
         s.missingAssets !== last.missingAssets ||
         s.activeRefs !== last.activeRefs ||
+        s.versions !== last.versions ||
         s.projectName !== last.projectName;
       last = s;
       if (!changed || (!s.assets.length && contentDuration(s.project) <= 0)) return;

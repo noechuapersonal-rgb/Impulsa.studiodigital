@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { addFiles } from "@/lib/media";
 import { getPlayer, Player, setPlayer } from "@/lib/player";
 import AddMenu from "./AddMenu";
+import VersionsBar from "./VersionsBar";
 import VoiceRecorder from "./VoiceRecorder";
 import { setBackground, setFormat } from "@/lib/actions";
 import { canvasSize, contentDuration, fmt } from "@/lib/project";
@@ -262,6 +263,7 @@ export default function Preview() {
           </button>
         )}
       </div>
+      <VersionsBar />
       {/* seek bar: drag to move back and forth through the video */}
       <div className="shrink-0 border-t border-[var(--line)] px-3 pt-2 md:px-4">
         <input

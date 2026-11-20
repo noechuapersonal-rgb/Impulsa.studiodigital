@@ -707,6 +707,10 @@ export function describeProject(): string {
     L.push("Efectos visuales:");
     for (const e of p.effects) L.push(`  - [${e.id}] ${e.type} ${e.start.toFixed(2)}–${e.end.toFixed(2)}s, intensidad ${e.intensity}`);
   }
+  if (s.versions.length)
+    L.push(
+      `Versiones guardadas: ${s.versions.map((v) => `«${v.name}»${v.id === s.activeVersion ? " (la que está en pantalla)" : ""}`).join(", ")}.`,
+    );
   if (!p.clips.length)
     L.push(
       `Sin clips de video (video sin grabar). Fondo animado: ${p.background ? `${p.background.style}, colores ${p.background.colors.join(" y ")}` : "degradado con el color de la marca (por defecto)"}.`,

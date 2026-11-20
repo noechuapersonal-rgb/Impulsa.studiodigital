@@ -262,6 +262,14 @@ export interface Project {
   background?: Background;
 }
 
+/** A saved variant of the edit ("Versión A", "Versión B"…), to compare and choose. */
+export interface ProjectVersion {
+  id: string;
+  name: string;
+  project: Project;
+  thumb?: string; // small JPEG data URL
+}
+
 /** Every brand of an account plus the style references (shared by all brands). */
 export interface BrandLibrary {
   brands: BrandKit[];

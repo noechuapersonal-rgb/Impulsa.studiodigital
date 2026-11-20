@@ -5,7 +5,7 @@ import { probeFile } from "./media";
 import { getPlayer } from "./player";
 import { contentDuration, emptyProject } from "./project";
 import { store } from "./store";
-import type { Asset, AssetMeta, Project, Segment } from "./types";
+import type { Asset, AssetMeta, Project, ProjectVersion, Segment } from "./types";
 
 /**
  * Saved projects. The edit (timeline, texts, subtitles, transcripts…) is saved to the account when
@@ -18,6 +18,8 @@ export interface ProjectData {
   assets: AssetMeta[];
   transcripts: Record<string, Segment[]>;
   activeRefs: string[];
+  versions?: ProjectVersion[];
+  activeVersion?: string | null;
 }
 
 export interface ProjectSummary {
@@ -54,6 +56,8 @@ function currentData(): ProjectData {
     assets: [...s.assets.map(meta), ...s.missingAssets],
     transcripts: s.transcripts,
     activeRefs: s.activeRefs,
+    versions: s.versions,
+    activeVersion: s.activeVersion,
   };
 }
 
@@ -198,6 +202,8 @@ export async function openProject(id: string): Promise<boolean> {
       missingAssets: missing,
       transcripts: rec.data.transcripts ?? {},
       activeRefs: rec.data.activeRefs ?? [],
+      versions: rec.data.versions ?? [],
+      activeVersion: rec.data.activeVersion ?? null,
       selection: null,
       past: [],
       future: [],

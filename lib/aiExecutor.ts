@@ -6,6 +6,7 @@ import { WHISPER_MODELS } from "./media";
 import { getPlayer } from "./player";
 import { contentDuration } from "./project";
 import { store } from "./store";
+import { saveVersion } from "./versions";
 import { narrateSubtitles, narrateText, type OriginalAudio } from "./tts";
 
 type Input = Record<string, unknown>;
@@ -138,6 +139,10 @@ export async function executeTool(name: string, input: Input): Promise<ToolOutpu
     case "set_background": {
       const b = A.setBackground(input as Parameters<typeof A.setBackground>[0]);
       return `Fondo: ${b.style}, base ${b.base}, acento ${b.accent}.`;
+    }
+    case "save_version": {
+      const v = await saveVersion(typeof input.name === "string" ? input.name : undefined);
+      return `Versión guardada: «${v.name}». Versiones: ${store.get().versions.map((x) => x.name).join(", ")}.`;
     }
     case "add_transitions": {
       const n = A.addTransitions(input as Parameters<typeof A.addTransitions>[0]);

@@ -37,6 +37,7 @@ const SUGGESTIONS = [
   "Haz un clip de 30 segundos con lo mejor",
   "Pon mi marca y un cartel con mi WhatsApp al final",
   "Escribime el texto para publicarlo en Instagram",
+  "Armame 3 versiones con distinto gancho para elegir",
 ];
 
 const TOOL_LABELS: Record<string, string> = {
@@ -58,6 +59,7 @@ const TOOL_LABELS: Record<string, string> = {
   add_motion: "Agregando un elemento animado",
   add_transitions: "Poniendo transiciones",
   set_background: "Armando el fondo animado",
+  save_version: "Guardando una versión",
   select_brand: "Eligiendo la marca del proyecto",
   view_frames: "Mirando el video",
   update_item: "Ajustando un elemento",
@@ -66,7 +68,8 @@ const TOOL_LABELS: Record<string, string> = {
   clear: "Limpiando elementos",
 };
 
-const MAX_STEPS = 14;
+// a video made from scratch, or several versions of it, can take many steps
+const MAX_STEPS = 30;
 const MAX_REF_IMAGES = 6;
 
 type Attachment = { id: string; name: string; thumb: string; sent: boolean } & (

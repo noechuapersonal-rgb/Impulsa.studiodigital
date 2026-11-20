@@ -307,6 +307,18 @@ Todos: start/end en segundos, position o x/y (centro, 0–1), size (1 = normal),
     },
   },
   {
+    name: "save_version",
+    description:
+      "Guarda lo que hay ahora en la línea de tiempo como una VERSIÓN del video (el cliente las compara abajo del visor y elige). Úsalo cuando pidan varias versiones, opciones o variantes: arma una, guárdala con un nombre corto que diga en qué se diferencia, cambia lo necesario y guarda la siguiente.",
+    input_schema: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Ej: «A · Gancho con pregunta», «B · Formato POV», «C · Colores de la marca»" },
+      },
+      required: ["name"],
+    },
+  },
+  {
     name: "add_transitions",
     description:
       "Pone una transición en cada corte entre clips de video (zoom, barrido o flash) y, por defecto, un whoosh. Úsalo cuando hay varios clips para que el video tenga ritmo de Reel. Si se vuelve a llamar, reemplaza las transiciones anteriores.",
@@ -499,6 +511,9 @@ Cuando el mensaje trae <video_de_referencia>, el cliente quiere que su video que
 5. En la respuesta, cuenta en viñetas qué tomaste de la referencia y, con honestidad, qué no se pudo recrear (por ejemplo una pantalla de una app muy específica). Para eso sugiere una alternativa concreta: subir capturas o fotos para mostrarlas en esos momentos.
 
 ## Fotos de referencia adjuntadas en el chat
+## Varias versiones
+Si piden varias versiones, opciones o variantes (máximo 3; si no dicen cuántas, 3): arma la primera completa y llama a save_version; después, para cada una de las siguientes, cambia lo que la diferencia (otro gancho, otro formato, otro estilo de subtítulos o colores, otro orden) y vuelve a llamar a save_version. Para rehacer el guion de una versión, borra la voz, los subtítulos y los elementos animados (clear: voice, subtitles, motions) y vuelve a armarlos. Las diferencias tienen que notarse en los primeros 3 segundos. La última versión queda en pantalla. En la respuesta, una viñeta por versión diciendo en qué se diferencia, y que las puede comparar abajo del visor, en «Versiones».
+
 ## Formatos de tendencia
 Cuando armes un video nuevo (sin grabar, con varios clips, o cuando pidan "un Reel", "un anuncio", "un video para Instagram"), basalo en uno de estos formatos probados. Si el mensaje trae <formato_elegido>, usa ESE formato. Si no, elige el que mejor encaje con lo que vende y el objetivo, y menciónalo en tu respuesta en pocas palabras ("Usé el formato «Paso a paso»"). Adapta los tiempos a la duración pedida y a lo que dice la voz, y reemplaza lo que está entre [corchetes] por el contenido real del cliente (nunca dejes placeholders).
 
