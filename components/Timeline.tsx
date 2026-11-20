@@ -5,7 +5,7 @@ import { getPlayer } from "@/lib/player";
 import { clipDur, clipStarts, contentDuration } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 import type { Project, Selection } from "@/lib/types";
-import { EFFECT_LABELS } from "@/lib/types";
+import { EFFECT_LABELS, MOTION_LABELS } from "@/lib/types";
 
 type Kind = NonNullable<Selection>["kind"];
 const LABEL_W_DESKTOP = 92;
@@ -82,6 +82,30 @@ export default function Timeline({ mobile = false }: { mobile?: boolean }) {
           label: `T  ${o.text}`,
           color: "#b4367a",
         })),
+    },
+    {
+      title: mobile ? "Títulos" : "Títulos ✨",
+      items: (project.motions ?? [])
+        .filter((m) => m.type === "titulo_animado")
+        .map((m) => ({
+          id: m.id,
+          kind: "motion" as const,
+          start: m.start,
+          end: m.end,
+          label: `✨ ${m.text ?? ""}`,
+          color: "#6d28d9",
+        })),
+    },
+    {
+      title: "Animados",
+      items: (project.motions ?? []).filter((m) => m.type !== "titulo_animado").map((m) => ({
+        id: m.id,
+        kind: "motion" as const,
+        start: m.start,
+        end: m.end,
+        label: `✨ ${m.text || m.value || m.label || MOTION_LABELS[m.type]}`,
+        color: "#7c3aed",
+      })),
     },
     {
       title: mobile ? "Subs" : "Subtítulos",
@@ -265,6 +289,8 @@ function shiftItem(p: Project, it: Item, mode: "move" | "resize", dt: number): P
       return { ...p, cues: p.cues.map(mv) };
     case "effect":
       return { ...p, effects: p.effects.map(mv) };
+    case "motion":
+      return { ...p, motions: (p.motions ?? []).map(mv) };
     case "audio":
       return {
         ...p,

@@ -127,6 +127,14 @@ export async function executeTool(name: string, input: Input): Promise<ToolOutpu
       const n = await narrateSubtitles({ lang, original });
       return `Listo: la voz lee ${n} frases de los subtítulos.`;
     }
+    case "add_motion": {
+      const id = A.addMotion(input);
+      return `Elemento animado agregado [${id}].`;
+    }
+    case "add_transitions": {
+      const n = A.addTransitions(input as Parameters<typeof A.addTransitions>[0]);
+      return n ? `Transiciones puestas en ${n} cortes.` : "Hay un solo clip: no hay cortes donde poner transiciones.";
+    }
     case "set_video_volume":
       A.setVideoVolume(Number(input.volume ?? 1));
       return "Volumen actualizado.";

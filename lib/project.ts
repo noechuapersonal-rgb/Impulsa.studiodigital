@@ -47,6 +47,15 @@ export const SUBTITLE_PRESETS: Record<SubtitlePreset, Omit<SubtitleStyle, "prese
     background: false,
     wordsPerCue: 7,
   },
+  viral: {
+    fontSize: 62,
+    color: "#ffffff",
+    highlight: "#d4ff3a",
+    position: "middle",
+    uppercase: true,
+    background: false,
+    wordsPerCue: 3,
+  },
   neon: {
     fontSize: 48,
     color: "#67e8f9",
@@ -72,6 +81,7 @@ export function emptyProject(): Project {
     cues: [],
     subtitleStyle: subtitleStyle("tiktok"),
     effects: [],
+    motions: [],
   };
 }
 
@@ -217,6 +227,7 @@ export function removeRanges(p: Project, rangesIn: Range[]): Project {
     overlays: span(p.overlays),
     cues: span(p.cues),
     effects: span(p.effects),
+    motions: span(p.motions ?? []),
     audio,
   };
 }
@@ -405,7 +416,7 @@ export function positionToXY(pos: string): { x: number; y: number } {
   }
 }
 
-export type SlotKind = "image" | "text" | "effect" | "sfx";
+export type SlotKind = "image" | "text" | "effect" | "sfx" | "motion";
 
 /**
  * Where the next item of a kind goes: right after the last item of that kind already in the video
@@ -420,7 +431,9 @@ export function nextSlot(
 ): { start: number; end: number; full: boolean } {
   const dur = totalDuration(p);
   const ends =
-    kind === "effect"
+    kind === "motion"
+      ? (p.motions ?? []).filter((m) => !(dur > 0 && m.end - m.start >= dur * 0.9)).map((m) => m.end)
+      : kind === "effect"
       ? p.effects.map((e) => e.end)
       : kind === "sfx"
         ? p.audio.filter((a) => a.kind === "sfx").map((a) => a.start + a.duration)

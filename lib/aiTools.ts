@@ -30,9 +30,9 @@ const animation = {
 const subtitleStyleProps = {
   preset: {
     type: "string",
-    enum: ["tiktok", "clasico", "karaoke", "minimal", "neon"],
+    enum: ["viral", "tiktok", "clasico", "karaoke", "minimal", "neon"],
     description:
-      "tiktok: mayúsculas grandes con la palabra activa resaltada, 3 palabras. clasico: caja negra abajo. karaoke: palabra activa con fondo de color. minimal: limpio con sombra. neon: brillo de color.",
+      "viral: el estilo de tendencia (mayúsculas grandes, la palabra que se dice salta más grande en color, borde grueso, 3 palabras). tiktok: mayúsculas grandes con la palabra activa resaltada. clasico: caja negra abajo. karaoke: palabra activa con fondo de color. minimal: limpio con sombra. neon: brillo de color.",
   },
   color: { type: "string", description: "Color del texto en hex, ej. #ffffff" },
   highlight: { type: "string", description: "Color de la palabra activa en hex" },
@@ -254,6 +254,58 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
     },
   },
   {
+    name: "add_motion",
+    description: `Agrega un ELEMENTO ANIMADO de calidad profesional (es lo que le da onda y estilo de tendencia al video). Tipos y campos:
+- titulo_animado: título que entra palabra por palabra con rebote. text: el título; [palabras entre corchetes] van en una caja del color de acento y *palabras entre asteriscos* van en color de acento. Ej: "LO ÚNICO QUE PIDIÓ: [\"ALGO SIMPLE\"]". Ideal para el gancho y títulos fijos de cada bloque.
+- contador: número que sube de from a to. value: prefijo opcional ("$"), label: unidad al lado ("pedidos", "clientes"), text: rótulo chico arriba.
+- lista: lista con ✓ que aparecen de a uno. items: 2 a 8 frases cortas; label: título chico opcional.
+- tarjeta: tarjeta oscura con un dato. label: rótulo chico ("PLAN MENSUAL"), value: el dato grande ("$ 28.000", "13:59", "+120%"), sub: aclaración.
+- audio: burbuja de audio de WhatsApp con onda que avanza. text: nombre (se usa la inicial), value: duración ("4:00").
+- cierre: cartel final. text: frase grande ("¿TENÉS UN COMPLEJO?"), sub: aclaración, label: texto del botón ("COMENTÁ CANCHA").
+- progreso: barra que se llena. label: qué mide, to: porcentaje final.
+- emoji: un emoji grande que salta. value: el emoji.
+Todos: start/end en segundos, position o x/y (centro, 0–1), size (1 = normal), accent (color de acento hex; por defecto el de la marca), color (texto), font (tipografía; por defecto la de la marca).`,
+    input_schema: {
+      type: "object",
+      properties: {
+        type: {
+          type: "string",
+          enum: ["titulo_animado", "contador", "lista", "tarjeta", "audio", "cierre", "progreso", "emoji"],
+        },
+        start: { type: "number" },
+        end: { type: "number" },
+        text: { type: "string" },
+        label: { type: "string" },
+        value: { type: "string" },
+        sub: { type: "string" },
+        items: { type: "array", items: { type: "string" } },
+        from: { type: "number" },
+        to: { type: "number" },
+        position,
+        x: { type: "number" },
+        y: { type: "number" },
+        size: { type: "number" },
+        accent: { type: "string" },
+        color: { type: "string" },
+        font: { type: "string" },
+      },
+      required: ["type"],
+    },
+  },
+  {
+    name: "add_transitions",
+    description:
+      "Pone una transición en cada corte entre clips de video (zoom, barrido o flash) y, por defecto, un whoosh. Úsalo cuando hay varios clips para que el video tenga ritmo de Reel. Si se vuelve a llamar, reemplaza las transiciones anteriores.",
+    input_schema: {
+      type: "object",
+      properties: {
+        style: { type: "string", enum: ["mixto", "zoom", "barrido", "flash"], description: "Por defecto mixto (alterna)." },
+        sound: { type: "boolean", description: "Whoosh en cada corte. Por defecto true." },
+        intensity: { type: "number", description: "0.2–1, por defecto 0.8" },
+      },
+    },
+  },
+  {
     name: "set_video_volume",
     description: "Cambia el volumen del audio original de todos los clips de video (0 = silencio, 1 = normal, 2 = doble).",
     input_schema: {
@@ -343,6 +395,13 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
         effect: { type: "string", description: "Para efectos visuales: nuevo tipo" },
         intensity: { type: "number", description: "Para efectos visuales: 0–1" },
         volume: { type: "number", description: "Para sonidos y música: 0–2" },
+        label: { type: "string", description: "Elementos animados" },
+        value: { type: "string", description: "Elementos animados" },
+        sub: { type: "string", description: "Elementos animados" },
+        items: { type: "array", items: { type: "string" }, description: "Elementos animados (lista)" },
+        from: { type: "number", description: "Elementos animados (contador)" },
+        to: { type: "number", description: "Elementos animados (contador, progreso)" },
+        accent: { type: "string", description: "Elementos animados: color de acento hex" },
       },
       required: ["id"],
     },
@@ -372,7 +431,7 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
       properties: {
         what: {
           type: "string",
-          enum: ["subtitles", "effects", "overlays", "texts", "images", "music", "sound_effects", "voice"],
+          enum: ["subtitles", "effects", "overlays", "texts", "images", "music", "sound_effects", "voice", "motions"],
         },
       },
       required: ["what"],
@@ -400,6 +459,8 @@ export const SYSTEM_PROMPT = `Eres el editor de video con IA de "Impulsa Studio"
 - Cierre (últimos 2 a 4 s): llamado a la acción con preset "cta" y los datos reales de la marca (WhatsApp, Instagram o web). Nunca inventes teléfonos, precios, descuentos ni promociones.
 - Textos: frases cortas y fáciles de leer en un celular. Español rioplatense si el cliente escribe así ("escribinos", "aprovechá"). Usa los colores y la tipografía de la marca cuando exista (apply_brand).
 - Voz en off (add_voiceover): solo cuando la pidan o el video no tenga voz y pidan narración. Si la voz lee lo mismo que la persona ya dice en el video, usa original_audio "silenciar". El guion: frases cortas y naturales; los precios y números escríbelos tal cual (la herramienta los pronuncia).
+- ESTILO DE TENDENCIA (lo más importante para que el video tenga onda y no se vea básico): usa elementos animados (add_motion) en lugar de textos simples para todo lo que sea gancho, títulos de bloque, datos, números, listas y cierre. Un Reel de 20–40 s bien editado suele tener: un titulo_animado de gancho en los primeros 2–3 s con 1–2 palabras clave en [caja] de color; algo nuevo en pantalla cada 2–3 s (un dato en tarjeta, un contador, una lista que se va completando, un emoji de énfasis); subtítulos con preset "viral" y el color de acento de la marca; transiciones (add_transitions) si hay varios clips; zoom en frases fuertes; whoosh/pop en cada aparición; y un cartel de cierre (cierre) con el llamado a la acción en los últimos 3–4 s. Usa el mismo color de acento en todo el video (el de la marca o el de la referencia) y frases muy cortas, en mayúsculas para títulos. Ubica los elementos donde no tapen caras ni subtítulos (títulos arriba, y≈0.12–0.2; tarjetas y listas al medio, y≈0.4–0.5; subtítulos en middle o bottom según lo que quede libre).
+- Si el cliente solo pasa información o una idea (sin video propio), arma igual el video: el gancho, los datos y el cierre con elementos animados sobre las fotos o videos que haya subido; si no subió nada, dile que suba al menos un video o foto de fondo.
 - Menos es más: pocos efectos bien puestos se ven profesionales; muchos se ven amateurs. Evita filtros fuertes salvo que los pidan.
 
 ## Marca y referencias
@@ -411,9 +472,9 @@ export const SYSTEM_PROMPT = `Eres el editor de video con IA de "Impulsa Studio"
 Cuando el mensaje trae <video_de_referencia>, el cliente quiere que su video quede COMO ESE (no es parte de su proyecto). Trabaja así:
 1. Analiza la referencia antes de editar: arma mentalmente su guion por bloques con tiempos (gancho, desarrollo, remate, cierre) usando los fotogramas, los cambios de escena y lo que se dice. Fíjate en los ELEMENTOS QUE SE REPITEN (por ejemplo un título fijo arriba que se mantiene, una palabra resaltada en una caja de color, un contador que va subiendo "1, 2, 3…", una frase que vuelve) y en el estilo de los subtítulos (tamaño, mayúsculas, palabra resaltada en color, posición).
 2. Llama a get_transcript para saber qué se dice en el video del cliente y mapea cada bloque de la referencia a un momento equivalente de SU video (proporcional a su duración y a lo que dice). La estructura y el ritmo se copian; el contenido se adapta a su tema y a su marca (nunca copies textos literales de la referencia salvo que lo pida).
-3. Recrea los elementos con las herramientas: el formato (set_format), el ritmo de cortes (remove_silences / cut_ranges), los títulos fijos (add_text preset titulo, con la misma posición y duración larga), las palabras en caja de color (add_text preset etiqueta debajo del título), los contadores o frases que cambian (un texto por tramo, uno detrás de otro, en el mismo lugar), los subtítulos con el preset y colores más parecidos (style_subtitles), efectos y sonidos en los mismos momentos de énfasis, y el cierre con llamado a la acción. Usa la tipografía y colores de la referencia si el cliente no tiene marca; si tiene, combínalos con su marca.
+3. Recrea los elementos con las herramientas: el formato (set_format), el ritmo de cortes (remove_silences / cut_ranges), los títulos fijos (add_motion titulo_animado, con las palabras resaltadas entre [corchetes], en la misma posición y con duración larga), los contadores que suben (add_motion contador), las listas, tarjetas con datos, audios de WhatsApp y carteles de cierre (add_motion), las frases que cambian (un elemento por tramo, uno detrás de otro, en el mismo lugar), los subtítulos con el preset y colores más parecidos (style_subtitles; "viral" para el estilo de tendencia), las transiciones entre clips (add_transitions), efectos y sonidos en los mismos momentos de énfasis, y el cierre con llamado a la acción. Usa la tipografía y colores de la referencia si el cliente no tiene marca; si tiene, combínalos con su marca.
 4. Revisa con view_frames que se parezca a la referencia y corrige con update_item.
-5. En la respuesta, cuenta en viñetas qué tomaste de la referencia y, con honestidad, qué no se puede recrear con el editor (por ejemplo tarjetas o pantallas animadas, gráficos que se mueven). Para eso sugiere una alternativa concreta: subir capturas o fotos para mostrarlas en esos momentos.
+5. En la respuesta, cuenta en viñetas qué tomaste de la referencia y, con honestidad, qué no se pudo recrear (por ejemplo una pantalla de una app muy específica). Para eso sugiere una alternativa concreta: subir capturas o fotos para mostrarlas en esos momentos.
 
 ## Fotos de referencia adjuntadas en el chat
 Cuando el mensaje trae <fotos_de_referencia>, son ejemplos del estilo que busca el cliente (un diseño, un cartel, una captura de un Reel, una paleta): no son parte de su video. Toma de ellas lo que pida (tipografía parecida, colores en hex, tipo y posición de los textos, contorno o caja de color, encuadre, filtro) y aplícalo con las herramientas. Si quiere que una de esas fotos APAREZCA en el video, pídele que la suba en "Medios" (o con el botón +) y después colócala con add_image.

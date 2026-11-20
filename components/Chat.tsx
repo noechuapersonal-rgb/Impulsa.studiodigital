@@ -54,6 +54,8 @@ const TOOL_LABELS: Record<string, string> = {
   set_format: "Cambiando formato",
   set_video_volume: "Ajustando volumen",
   apply_brand: "Aplicando tu marca",
+  add_motion: "Agregando un elemento animado",
+  add_transitions: "Poniendo transiciones",
   select_brand: "Eligiendo la marca del proyecto",
   view_frames: "Mirando el video",
   update_item: "Ajustando un elemento",

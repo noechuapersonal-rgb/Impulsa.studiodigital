@@ -3,7 +3,17 @@
 import { getPlayer } from "@/lib/player";
 import { splitClipAt } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
-import { EFFECT_LABELS, EFFECT_TYPES, type Animation, type EffectType, type Project, type TextPreset } from "@/lib/types";
+import { MOTION_DEFAULT_ACCENT } from "@/lib/motion";
+import {
+  EFFECT_LABELS,
+  EFFECT_TYPES,
+  MOTION_LABELS,
+  type Animation,
+  type EffectType,
+  type Motion,
+  type Project,
+  type TextPreset,
+} from "@/lib/types";
 import { deleteSelection } from "@/lib/actions";
 import ColorField from "./ColorField";
 import FontSelect from "./FontSelect";
@@ -187,6 +197,119 @@ export default function Inspector() {
             <option value="slide_up">Deslizar arriba</option>
             {o.kind === "text" && <option value="typewriter">Máquina de escribir</option>}
           </select>
+        </Field>
+      </div>
+    );
+  }
+
+  if (sel.kind === "motion") {
+    const m = (project.motions ?? []).find((x) => x.id === sel.id);
+    if (!m) return null;
+    const set = (patch: Partial<Motion>, key = Object.keys(patch).join()) =>
+      update(`${m.id}${key}`, (p) => ({ ...p, motions: (p.motions ?? []).map((x) => (x.id === m.id ? { ...x, ...patch } : x)) }));
+    const txt = (label: string, k: "text" | "label" | "value" | "sub", placeholder = "", rows = 1) => (
+      <Field label={label}>
+        {rows > 1 ? (
+          <textarea className="input" rows={rows} value={m[k] ?? ""} placeholder={placeholder} onChange={(e) => set({ [k]: e.target.value })} />
+        ) : (
+          <input className="input" value={m[k] ?? ""} placeholder={placeholder} onChange={(e) => set({ [k]: e.target.value })} />
+        )}
+      </Field>
+    );
+    const numF = (label: string, k: "from" | "to") => (
+      <Field label={label}>
+        <input className="input" type="number" value={m[k] ?? ""} onChange={(e) => set({ [k]: e.target.value === "" ? undefined : Number(e.target.value) })} />
+      </Field>
+    );
+    return (
+      <div className="space-y-3">
+        {header(MOTION_LABELS[m.type])}
+        {m.type === "titulo_animado" && (
+          <>
+            {txt("Texto", "text", "LO ÚNICO QUE PIDIÓ: [ALGO SIMPLE]", 2)}
+            <p className="-mt-1 text-[11px] text-[var(--muted)]">
+              Poné <b>[palabras]</b> entre corchetes para una caja de color, o <b>*palabras*</b> entre asteriscos para
+              pintarlas del color de acento.
+            </p>
+          </>
+        )}
+        {m.type === "contador" && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              {numF("Desde", "from")}
+              {numF("Hasta", "to")}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {txt("Unidad", "label", "pedidos")}
+              {txt("Prefijo", "value", "$")}
+            </div>
+            {txt("Rótulo arriba", "text", "Clientes nuevos")}
+          </>
+        )}
+        {m.type === "lista" && (
+          <>
+            {txt("Título (opcional)", "label", "Incluye")}
+            <Field label="Ítems (uno por línea)">
+              <textarea
+                className="input"
+                rows={5}
+                value={(m.items ?? []).join("\n")}
+                onChange={(e) => set({ items: e.target.value.split("\n").slice(0, 8) })}
+              />
+            </Field>
+          </>
+        )}
+        {m.type === "tarjeta" && (
+          <>
+            {txt("Rótulo", "label", "PLAN MENSUAL")}
+            {txt("Dato grande", "value", "$ 28.000")}
+            {txt("Aclaración", "sub", "Sin comisiones")}
+          </>
+        )}
+        {m.type === "audio" && (
+          <div className="grid grid-cols-2 gap-2">
+            {txt("Nombre", "text", "Diego")}
+            {txt("Duración", "value", "0:36")}
+          </div>
+        )}
+        {m.type === "cierre" && (
+          <>
+            {txt("Frase", "text", "¿TENÉS UN NEGOCIO?", 2)}
+            {txt("Aclaración", "sub", "Escribinos y te contamos")}
+            {txt("Botón", "label", "ESCRIBINOS")}
+          </>
+        )}
+        {m.type === "progreso" && (
+          <div className="grid grid-cols-2 gap-2">
+            {txt("Qué mide", "label", "Ventas")}
+            {numF("Porcentaje", "to")}
+          </div>
+        )}
+        {m.type === "emoji" && txt("Emoji", "value", "🔥")}
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Color de acento">
+            <ColorField id={`motion-accent-${m.id}`} value={m.accent ?? project.brandColor ?? MOTION_DEFAULT_ACCENT} onChange={(c) => set({ accent: c })} />
+          </Field>
+          <Field label="Color del texto">
+            <ColorField id={`motion-color-${m.id}`} value={m.color ?? "#ffffff"} onChange={(c) => set({ color: c })} />
+          </Field>
+        </div>
+        {m.type !== "emoji" && (
+          <Field label="Tipografía">
+            <FontSelect id={`motion-font-${m.id}`} value={m.font ?? ""} emptyLabel="La del video" onChange={(f) => set({ font: f || undefined })} />
+          </Field>
+        )}
+        {timeFields(m.start, m.end, (s, e) => set({ start: s, end: Math.max(s + 0.3, e) }, "time"))}
+        <div className="grid grid-cols-2 gap-2">
+          <Field label={`Altura ${Math.round(m.y * 100)}%`}>
+            <input type="range" min={0.05} max={0.95} step={0.01} value={m.y} className="w-full" onChange={(e) => set({ y: Number(e.target.value) })} />
+          </Field>
+          <Field label={`Tamaño ${m.size.toFixed(2)}`}>
+            <input type="range" min={0.4} max={2.5} step={0.01} value={m.size} className="w-full" onChange={(e) => set({ size: Number(e.target.value) })} />
+          </Field>
+        </div>
+        <Field label={`Horizontal ${Math.round(m.x * 100)}%`}>
+          <input type="range" min={0.05} max={0.95} step={0.01} value={m.x} className="w-full" onChange={(e) => set({ x: Number(e.target.value) })} />
         </Field>
       </div>
     );

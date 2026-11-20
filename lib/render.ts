@@ -1,3 +1,4 @@
+import { drawMotion } from "./motion";
 import type { Cue, Effect, Fit, Overlay, Project, SubtitleStyle } from "./types";
 
 export type Drawable = HTMLVideoElement | HTMLImageElement;
@@ -105,6 +106,20 @@ export function drawFrame(ctx: CanvasRenderingContext2D, f: FrameInput) {
         if (Math.sin(t * 37) > 0.3) dx += (Math.random() - 0.5) * 30 * k * u;
         filters.push(`hue-rotate(${Math.random() * 90 * k}deg)`);
         break;
+      case "barrido": {
+        // whip pan: the new shot slides in fast with motion blur
+        // slightly enlarged while it slides, so the frame never shows a black gap
+        const rest = Math.pow(1 - clamp(local), 3);
+        dx += rest * W * 0.2 * k;
+        zoom *= 1 + rest * 0.45 * k;
+        if (rest > 0.02) filters.push(`blur(${rest * 26 * u}px)`);
+        break;
+      }
+      case "zoom_entrada": {
+        const rest = Math.pow(1 - clamp(local), 3);
+        zoom *= 1 + 0.4 * k * rest;
+        break;
+      }
     }
   }
 
@@ -162,6 +177,10 @@ export function drawFrame(ctx: CanvasRenderingContext2D, f: FrameInput) {
 
   for (const o of project.overlays) {
     if (t >= o.start && t < o.end) drawOverlay(ctx, o, t, W, H, f.images);
+  }
+
+  for (const m of project.motions ?? []) {
+    if (t >= m.start && t < m.end) drawMotion(ctx, m, t, W, H, { font: FONT, brandColor: project.brandColor });
   }
 
   const cue = project.cues.find((c) => t >= c.start && t < c.end);
@@ -387,13 +406,18 @@ function drawSubtitle(
   const prog = clamp((t - cue.start) / Math.max(0.05, cue.end - cue.start));
   let acc = 0;
   let active = words.length - 1;
+  let activeFrom = 0;
   for (let i = 0; i < words.length; i++) {
+    const before = acc;
     acc += words[i].length + 1;
     if (acc / total > prog) {
       active = i;
+      activeFrom = before / total;
       break;
     }
   }
+  // "viral": the word being said pops bigger, in the highlight color
+  const activeStart = cue.start + activeFrom * (cue.end - cue.start);
 
   ctx.save();
   const weight = st.preset === "minimal" ? 600 : 900;
@@ -422,7 +446,8 @@ function drawSubtitle(
   const blockTop = baseY - ((lines.length - 1) * lh) / 2;
 
   // pop-in on cue start for bold styles
-  const popIn = st.preset === "tiktok" || st.preset === "neon" ? easeOutBack(clamp((t - cue.start) / 0.18)) : 1;
+  const popIn =
+    st.preset === "tiktok" || st.preset === "neon" || st.preset === "viral" ? easeOutBack(clamp((t - cue.start) / 0.18)) : 1;
 
   lines.forEach((line, li) => {
     const lw = line.reduce((a, p) => a + p.width, 0) + space * (line.length - 1);
@@ -446,6 +471,10 @@ function drawSubtitle(
       ctx.save();
       const cx = x + p.width / 2;
       ctx.translate(cx, y);
+      if (st.preset === "viral" && isActive) {
+        const sc = 0.8 + 0.38 * easeOutBack(clamp((t - activeStart) / 0.16));
+        ctx.scale(sc, sc);
+      }
       if (st.preset === "karaoke" && isActive) {
         ctx.fillStyle = st.highlight;
         roundRect(ctx, -p.width / 2 - size * 0.15, -lh / 2 + size * 0.05, p.width + size * 0.3, lh - size * 0.1, size * 0.18);
@@ -459,7 +488,7 @@ function drawSubtitle(
         ctx.shadowBlur = size * 0.25;
       } else if (!st.background) {
         ctx.lineJoin = "round";
-        ctx.lineWidth = size * 0.2;
+        ctx.lineWidth = size * (st.preset === "viral" ? 0.26 : 0.2);
         ctx.strokeStyle = "#000";
         ctx.strokeText(p.w, -p.width / 2, 0);
       }

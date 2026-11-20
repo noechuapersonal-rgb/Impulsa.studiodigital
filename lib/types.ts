@@ -107,7 +107,7 @@ export interface Cue {
   text: string;
 }
 
-export type SubtitlePreset = "tiktok" | "clasico" | "karaoke" | "minimal" | "neon";
+export type SubtitlePreset = "tiktok" | "clasico" | "karaoke" | "minimal" | "neon" | "viral";
 
 export interface SubtitleStyle {
   preset: SubtitlePreset;
@@ -138,6 +138,8 @@ export const EFFECT_TYPES = [
   "flash",
   "glitch",
   "cine",
+  "barrido",
+  "zoom_entrada",
 ] as const;
 export type EffectType = (typeof EFFECT_TYPES)[number];
 
@@ -157,7 +159,62 @@ export const EFFECT_LABELS: Record<EffectType, string> = {
   flash: "Flash blanco",
   glitch: "Glitch",
   cine: "Barras de cine",
+  barrido: "Transición barrido",
+  zoom_entrada: "Transición zoom",
 };
+
+/** Animated graphic elements ("elementos animados") drawn on top of the video. */
+export const MOTION_TYPES = [
+  "titulo_animado",
+  "contador",
+  "lista",
+  "tarjeta",
+  "audio",
+  "cierre",
+  "progreso",
+  "emoji",
+] as const;
+export type MotionType = (typeof MOTION_TYPES)[number];
+
+export const MOTION_LABELS: Record<MotionType, string> = {
+  titulo_animado: "Título animado",
+  contador: "Contador",
+  lista: "Lista con ✓",
+  tarjeta: "Tarjeta con dato",
+  audio: "Audio de WhatsApp",
+  cierre: "Cartel de cierre",
+  progreso: "Barra de progreso",
+  emoji: "Emoji",
+};
+
+export interface Motion {
+  id: string;
+  type: MotionType;
+  start: number;
+  end: number;
+  /** center, normalized 0..1 */
+  x: number;
+  y: number;
+  /** size multiplier (1 = normal) */
+  size: number;
+  /** main text. In titles, [palabras] go in a color box and *palabras* in the accent color */
+  text?: string;
+  /** small label (card / progress title, counter unit, list title) */
+  label?: string;
+  /** big value of a card, the emoji, the length of an audio ("0:36") */
+  value?: string;
+  /** subtitle / button text */
+  sub?: string;
+  /** counter: from → to. progress: percent reached (to) */
+  from?: number;
+  to?: number;
+  items?: string[];
+  /** text color */
+  color?: string;
+  /** highlight color (default: brand color) */
+  accent?: string;
+  font?: string;
+}
 
 export interface Effect {
   id: string;
@@ -185,6 +242,8 @@ export interface Project {
   brandColor?: string;
   /** which of the client's brands this video is for (missing = none chosen) */
   brandId?: string;
+  /** animated graphic elements */
+  motions?: Motion[];
 }
 
 /** Every brand of an account plus the style references (shared by all brands). */
@@ -244,5 +303,5 @@ export interface Segment {
 }
 
 export type Selection =
-  | { kind: "clip" | "overlay" | "audio" | "cue" | "effect"; id: string }
+  | { kind: "clip" | "overlay" | "audio" | "cue" | "effect" | "motion"; id: string }
   | null;

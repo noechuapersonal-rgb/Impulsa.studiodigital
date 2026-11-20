@@ -23,6 +23,7 @@ import { SFX_INFO } from "./sfx";
 import { store } from "./store";
 import {
   EFFECT_TYPES,
+  MOTION_TYPES,
   SFX_NAMES,
   type Animation,
   type Aspect,
@@ -30,6 +31,8 @@ import {
   type AssetKind,
   type EffectType,
   type Fit,
+  type Motion,
+  type MotionType,
   type SfxName,
   type SubtitlePreset,
   type SubtitleStyle,
@@ -357,6 +360,125 @@ export function addEffect(o: { effect?: string; start?: number; end?: number; in
   return id;
 }
 
+const MOTION_DEFAULT_LEN: Record<MotionType, number> = {
+  titulo_animado: 3,
+  contador: 2.5,
+  lista: 4,
+  tarjeta: 3,
+  audio: 4,
+  cierre: 4,
+  progreso: 3,
+  emoji: 1.5,
+};
+
+/** Default place on screen of each kind of animated element. */
+const MOTION_DEFAULT_Y: Record<MotionType, number> = {
+  titulo_animado: 0.16,
+  contador: 0.3,
+  lista: 0.45,
+  tarjeta: 0.45,
+  audio: 0.3,
+  cierre: 0.5,
+  progreso: 0.45,
+  emoji: 0.4,
+};
+
+const str = (v: unknown, max = 300) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
+const hex = (v: unknown) => (typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v.trim()) ? v.trim() : undefined);
+
+function motionFields(o: Record<string, unknown>): Partial<Motion> {
+  const out: Partial<Motion> = {};
+  const set = <K extends keyof Motion>(k: K, v: Motion[K] | undefined) => {
+    if (v !== undefined) out[k] = v;
+  };
+  set("text", str(o.text, 200));
+  set("label", str(o.label, 80));
+  set("value", str(o.value, 40));
+  set("sub", str(o.sub, 200));
+  set("color", hex(o.color));
+  set("accent", hex(o.accent));
+  set("font", str(o.font, 60));
+  if (typeof o.from === "number" && isFinite(o.from)) out.from = o.from;
+  if (typeof o.to === "number" && isFinite(o.to)) out.to = o.to;
+  if (Array.isArray(o.items)) out.items = o.items.map((x) => String(x).trim().slice(0, 80)).filter(Boolean).slice(0, 8);
+  if (typeof o.size === "number" && isFinite(o.size)) out.size = Math.min(2.5, Math.max(0.4, o.size));
+  if (typeof o.x === "number" && isFinite(o.x)) out.x = Math.min(1, Math.max(0, o.x));
+  if (typeof o.y === "number" && isFinite(o.y)) out.y = Math.min(1, Math.max(0, o.y));
+  if (typeof o.position === "string") {
+    const xy = positionToXY(o.position);
+    if (out.x === undefined) out.x = xy.x;
+    if (out.y === undefined) out.y = xy.y;
+  }
+  return out;
+}
+
+/** Adds an animated element (title, counter, list, card, audio, closing card, progress, emoji). */
+export function addMotion(o: Record<string, unknown>): string {
+  const type = (MOTION_TYPES as readonly string[]).includes(String(o.type)) ? (o.type as MotionType) : "titulo_animado";
+  const start = Math.max(0, num(o.start, store.get().time));
+  const end = Math.max(start + 0.4, num(o.end, start + MOTION_DEFAULT_LEN[type]));
+  const id = uid();
+  const f = motionFields(o);
+  const brand = store.get().brand;
+  const m: Motion = {
+    id,
+    type,
+    start,
+    end,
+    x: 0.5,
+    y: MOTION_DEFAULT_Y[type],
+    size: 1,
+    // titles and closing cards use the brand's title typography
+    font: (type === "titulo_animado" || type === "cierre") && brand?.titleFont ? brand.titleFont : undefined,
+    ...f,
+  };
+  if (type === "emoji" && !m.value) m.value = "🔥";
+  store.edit((p) => ({ ...p, motions: [...(p.motions ?? []), m] }));
+  return id;
+}
+
+/** Puts a transition (and optionally a whoosh) at every cut between clips. */
+export function addTransitions(o: { style?: string; sound?: boolean; intensity?: number }): number {
+  const p = store.get().project;
+  const starts = clipStarts(p).slice(1);
+  if (!starts.length) return 0;
+  const styles: EffectType[] =
+    o.style === "barrido" ? ["barrido"] : o.style === "flash" ? ["flash"] : o.style === "zoom" ? ["zoom_entrada"] : ["zoom_entrada", "barrido", "flash"];
+  const k = Math.min(1, Math.max(0.2, num(o.intensity, 0.8)));
+  const effects = starts.map((t, i) => {
+    const type = styles[i % styles.length];
+    return { id: uid(), type, start: t, end: t + (type === "flash" ? 0.3 : 0.4), intensity: k };
+  });
+  const sounds =
+    o.sound === false
+      ? []
+      : starts.map((t) => ({
+          id: uid(),
+          kind: "sfx" as const,
+          sfx: "whoosh" as const,
+          name: "whoosh",
+          start: Math.max(0, t - 0.15),
+          duration: SFX_INFO.whoosh.duration,
+          offset: 0,
+          volume: 0.5,
+          fadeIn: 0,
+          fadeOut: 0,
+          loop: false,
+        }));
+  // replace earlier automatic transitions instead of stacking them
+  const isTransition = (e: { type: string; start: number }) =>
+    (e.type === "barrido" || e.type === "zoom_entrada" || e.type === "flash") && starts.some((t) => Math.abs(t - e.start) < 0.05);
+  store.edit((pr) => ({
+    ...pr,
+    effects: [...pr.effects.filter((e) => !isTransition(e)), ...effects],
+    audio: [
+      ...pr.audio.filter((a) => !(a.kind === "sfx" && a.sfx === "whoosh" && starts.some((t) => Math.abs(t - 0.15 - a.start) < 0.05))),
+      ...sounds,
+    ],
+  }));
+  return starts.length;
+}
+
 export function setFormat(o: { aspect?: string; fit?: string }) {
   store.edit((p) => ({
     ...p,
@@ -384,6 +506,8 @@ export function clearItems(what: string) {
         return { ...p, overlays: p.overlays.filter((o) => o.kind !== "image") };
       case "music":
         return { ...p, audio: p.audio.filter((a) => a.kind !== "music") };
+      case "motions":
+        return { ...p, motions: [] };
       case "sound_effects":
         return { ...p, audio: p.audio.filter((a) => a.kind !== "sfx") };
       case "voice":
@@ -397,6 +521,7 @@ export function clearItems(what: string) {
 export function removeItem(id: string) {
   store.edit((p) => ({
     ...p,
+    motions: (p.motions ?? []).filter((o) => o.id !== id),
     overlays: p.overlays.filter((o) => o.id !== id),
     audio: p.audio.filter((o) => o.id !== id),
     effects: p.effects.filter((o) => o.id !== id),
@@ -439,6 +564,15 @@ export function updateItem(id: string, o: Record<string, unknown>): string {
       ),
     }));
     return "Elemento actualizado.";
+  }
+  const mo = (p.motions ?? []).find((x) => x.id === id);
+  if (mo) {
+    const f = motionFields(o);
+    store.edit((pr) => ({
+      ...pr,
+      motions: (pr.motions ?? []).map((x) => (x.id === id ? { ...x, ...times(x), ...f } : x)),
+    }));
+    return "Elemento animado actualizado.";
   }
   const fx = p.effects.find((x) => x.id === id);
   if (fx) {
@@ -493,10 +627,12 @@ export function deleteItems(ids: string[]): number {
     p.overlays.filter((x) => set.has(x.id)).length +
     p.effects.filter((x) => set.has(x.id)).length +
     p.audio.filter((x) => set.has(x.id)).length +
-    p.cues.filter((x) => set.has(x.id)).length;
+    p.cues.filter((x) => set.has(x.id)).length +
+    (p.motions ?? []).filter((x) => set.has(x.id)).length;
   if (count)
     store.edit((pr) => ({
       ...pr,
+      motions: (pr.motions ?? []).filter((x) => !set.has(x.id)),
       overlays: pr.overlays.filter((x) => !set.has(x.id)),
       effects: pr.effects.filter((x) => !set.has(x.id)),
       audio: pr.audio.filter((x) => !set.has(x.id)),
@@ -558,6 +694,24 @@ export function describeProject(): string {
   if (p.effects.length) {
     L.push("Efectos visuales:");
     for (const e of p.effects) L.push(`  - [${e.id}] ${e.type} ${e.start.toFixed(2)}–${e.end.toFixed(2)}s, intensidad ${e.intensity}`);
+  }
+  if (p.motions?.length) {
+    L.push("Elementos animados:");
+    for (const m of p.motions) {
+      const d = [
+        m.text && `text "${m.text}"`,
+        m.label && `label "${m.label}"`,
+        m.value && `value "${m.value}"`,
+        m.sub && `sub "${m.sub}"`,
+        m.items?.length && `items ${JSON.stringify(m.items)}`,
+        m.from !== undefined && `from ${m.from}`,
+        m.to !== undefined && `to ${m.to}`,
+        m.accent && `accent ${m.accent}`,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      L.push(`  - [${m.id}] ${m.type} ${m.start.toFixed(2)}–${m.end.toFixed(2)}s, x=${m.x.toFixed(2)} y=${m.y.toFixed(2)} tamaño ${m.size}${d ? `: ${d}` : ""}`);
+    }
   }
   if (p.cues.length) {
     L.push(`Líneas de subtítulos (${p.cues.length}):`);

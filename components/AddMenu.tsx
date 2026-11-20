@@ -6,9 +6,21 @@ import { addFiles, addVideoSound } from "@/lib/media";
 import { fmt, nextSlot } from "@/lib/project";
 import { SFX_INFO } from "@/lib/sfx";
 import { store } from "@/lib/store";
-import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type TextPreset } from "@/lib/types";
+import { EFFECT_LABELS, EFFECT_TYPES, MOTION_LABELS, SFX_NAMES, type MotionType, type TextPreset } from "@/lib/types";
 
-type Step = "main" | "text" | "sfx" | "fx" | "sound";
+type Step = "main" | "text" | "sfx" | "fx" | "sound" | "motion";
+
+/** Ready-to-use examples for each animated element (the user edits them in Propiedades). */
+const MOTIONS: { type: MotionType; icon: string; hint: string; data: Record<string, unknown> }[] = [
+  { type: "titulo_animado", icon: "🅰️", hint: "Entra palabra por palabra, con palabras en caja de color", data: { text: "ESTO [CAMBIA TODO]" } },
+  { type: "contador", icon: "🔢", hint: "Un número que sube", data: { from: 0, to: 120, label: "clientes" } },
+  { type: "lista", icon: "✅", hint: "Ítems con ✓ que aparecen de a uno", data: { items: ["Rápido", "Simple", "Sin comisiones"] } },
+  { type: "tarjeta", icon: "💳", hint: "Un dato o precio destacado", data: { label: "PLAN MENSUAL", value: "$ 28.000", sub: "Sin comisiones" } },
+  { type: "audio", icon: "🎙️", hint: "Burbuja de audio de WhatsApp", data: { text: "Diego", value: "0:36" } },
+  { type: "progreso", icon: "📊", hint: "Barra que se llena", data: { label: "Ventas del mes", to: 85 } },
+  { type: "emoji", icon: "🔥", hint: "Emoji grande que salta", data: { value: "🔥" } },
+  { type: "cierre", icon: "📣", hint: "Cartel final con botón", data: { text: "¿TE SUMÁS?", sub: "Escribinos y te contamos", label: "ESCRIBINOS" } },
+];
 
 const TEXTS: { preset: TextPreset; label: string; text: string; position: string }[] = [
   { preset: "titulo", label: "Título grande", text: "TU TÍTULO", position: "top" },
@@ -48,6 +60,14 @@ export default function AddMenu() {
     const s = nextSlot(store.get().project, "sfx", store.get().time, SFX_INFO[name].duration);
     A.addSfx({ effect: name, at: s.start });
     notice("Sonido", s);
+    close();
+  };
+  const addMotion = (mo: (typeof MOTIONS)[number]) => {
+    const len = mo.type === "emoji" ? 1.5 : mo.type === "cierre" || mo.type === "lista" ? 4 : 3;
+    const s = nextSlot(store.get().project, "motion", store.get().time, len);
+    const id = A.addMotion({ type: mo.type, start: s.start, end: s.end, ...mo.data });
+    store.set({ selection: { kind: "motion", id } });
+    notice(MOTION_LABELS[mo.type], s);
     close();
   };
   const addFx = (type: (typeof EFFECT_TYPES)[number]) => {
@@ -125,7 +145,9 @@ export default function AddMenu() {
                 <h2 className="font-bold">
                   {step === "main"
                     ? "¿Qué querés agregar?"
-                    : step === "text"
+                    : step === "motion"
+                      ? "Elegí un elemento animado"
+                      : step === "text"
                       ? "Elegí un texto"
                       : step === "sfx"
                         ? "Elegí un sonido"
@@ -144,6 +166,12 @@ export default function AddMenu() {
                 <div className="grid gap-2">
                   <Option icon="🎬" label="Video" hint="Se agrega al final del video" onClick={() => video.current?.click()} />
                   <Option icon="🖼" label="Foto" hint="Va después de la última foto, 3 s cada una" onClick={() => photo.current?.click()} />
+                  <Option
+                    icon="🌟"
+                    label="Elemento animado"
+                    hint="Títulos con onda, contador, lista con ✓, tarjeta, audio de WhatsApp…"
+                    onClick={() => setStep("motion")}
+                  />
                   <Option icon="T" label="Texto" hint="Va después del último texto" onClick={() => setStep("text")} />
                   <Option icon="♪" label="Música de fondo" hint="Suena durante todo el video" onClick={() => music.current?.click()} />
                   <Option
@@ -159,6 +187,17 @@ export default function AddMenu() {
                   Cada cosa nueva va después de la última de su tipo. Si todavía no hay ninguna, va donde está parado el video.
                 </p>
               </>
+            )}
+
+            {step === "motion" && (
+              <div className="grid gap-2">
+                {MOTIONS.map((mo) => (
+                  <Option key={mo.type} icon={mo.icon} label={MOTION_LABELS[mo.type]} hint={mo.hint} onClick={() => addMotion(mo)} />
+                ))}
+                <p className="text-[11px] text-[var(--muted)]">
+                  Después tocá el elemento para cambiarle el texto, los colores y el lugar (en Propiedades).
+                </p>
+              </div>
             )}
 
             {step === "text" && (

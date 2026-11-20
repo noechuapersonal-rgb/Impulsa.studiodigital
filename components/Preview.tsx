@@ -82,7 +82,7 @@ export default function Preview() {
   const scale = Math.min((box.w - 16) / w, (box.h - 16) / h) || 0;
 
   // drag overlays directly on the preview
-  const drag = useRef<{ id: string; dx: number; dy: number; before: Project } | null>(null);
+  const drag = useRef<{ id: string; dx: number; dy: number; before: Project; motion?: boolean } | null>(null);
   const toCanvas = (e: React.PointerEvent) => {
     const r = canvasRef.current!.getBoundingClientRect();
     return { x: ((e.clientX - r.left) / r.width) * w, y: ((e.clientY - r.top) / r.height) * h };
@@ -99,6 +99,20 @@ export default function Preview() {
       s.eyedropper.apply(hex);
       store.set({ eyedropper: null });
       return;
+    }
+    // animated elements are on top: approximate box around their center
+    const motions = (s.project.motions ?? []).filter((m) => s.time >= m.start && s.time < m.end);
+    for (let i = motions.length - 1; i >= 0; i--) {
+      const m = motions[i];
+      const k = (Math.min(w, h) / 720) * m.size;
+      const hw = m.type === "emoji" ? 90 * k : Math.min(w * 0.46, 330 * k);
+      const hh = (m.type === "titulo_animado" ? 70 : m.type === "lista" ? 140 : m.type === "cierre" ? 170 : m.type === "emoji" ? 90 : 80) * k;
+      if (Math.abs(pt.x - m.x * w) <= hw && Math.abs(pt.y - m.y * h) <= hh) {
+        drag.current = { id: m.id, dx: pt.x - m.x * w, dy: pt.y - m.y * h, before: s.project, motion: true };
+        store.set({ selection: { kind: "motion", id: m.id } });
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        return;
+      }
     }
     const ctx = canvasRef.current!.getContext("2d")!;
     const imgs = getPlayer()?.images ?? new Map();
@@ -133,7 +147,9 @@ export default function Preview() {
     const x = Math.min(1, Math.max(0, (pt.x - d.dx) / w));
     const y = Math.min(1, Math.max(0, (pt.y - d.dy) / h));
     store.set((s) => ({
-      project: { ...s.project, overlays: s.project.overlays.map((o) => (o.id === d.id ? { ...o, x, y } : o)) },
+      project: d.motion
+        ? { ...s.project, motions: (s.project.motions ?? []).map((o) => (o.id === d.id ? { ...o, x, y } : o)) }
+        : { ...s.project, overlays: s.project.overlays.map((o) => (o.id === d.id ? { ...o, x, y } : o)) },
     }));
   };
   const onUp = () => {
