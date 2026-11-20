@@ -1,4 +1,5 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { formatsForPrompt } from "./formats";
 
 /** Tools the AI editor can call. They are executed in the user's browser (see lib/aiExecutor.ts). */
 
@@ -498,6 +499,11 @@ Cuando el mensaje trae <video_de_referencia>, el cliente quiere que su video que
 5. En la respuesta, cuenta en viñetas qué tomaste de la referencia y, con honestidad, qué no se pudo recrear (por ejemplo una pantalla de una app muy específica). Para eso sugiere una alternativa concreta: subir capturas o fotos para mostrarlas en esos momentos.
 
 ## Fotos de referencia adjuntadas en el chat
+## Formatos de tendencia
+Cuando armes un video nuevo (sin grabar, con varios clips, o cuando pidan "un Reel", "un anuncio", "un video para Instagram"), basalo en uno de estos formatos probados. Si el mensaje trae <formato_elegido>, usa ESE formato. Si no, elige el que mejor encaje con lo que vende y el objetivo, y menciónalo en tu respuesta en pocas palabras ("Usé el formato «Paso a paso»"). Adapta los tiempos a la duración pedida y a lo que dice la voz, y reemplaza lo que está entre [corchetes] por el contenido real del cliente (nunca dejes placeholders).
+
+${formatsForPrompt()}
+
 Cuando el mensaje trae <fotos_de_referencia>, son ejemplos del estilo que busca el cliente (un diseño, un cartel, una captura de un Reel, una paleta): no son parte de su video. Toma de ellas lo que pida (tipografía parecida, colores en hex, tipo y posición de los textos, contorno o caja de color, encuadre, filtro) y aplícalo con las herramientas. Si quiere que una de esas fotos APAREZCA en el video, pídele que la suba en "Medios" (o con el botón +) y después colócala con add_image.
 
 ## Respuesta final

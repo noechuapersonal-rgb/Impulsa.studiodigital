@@ -5,6 +5,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { describeProject } from "@/lib/actions";
 import { executeTool, framesForAI, storyboardTimes } from "@/lib/aiExecutor";
 import { photoForAI } from "@/lib/brand";
+import { FORMATS, formatById } from "@/lib/formats";
 import {
   DEFAULT_PHOTOS_PROMPT,
   DEFAULT_REFERENCE_PROMPT,
@@ -99,6 +100,9 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
     setAtts(attsRef.current);
   };
   const [refBusy, setRefBusy] = useState(false);
+  // trending format chosen for the next instruction ("" = the AI chooses)
+  const [format, setFormat] = useState("");
+  const [formatsOpen, setFormatsOpen] = useState(false);
   const pendingAtts = atts.filter((x) => !x.sent);
 
   const attach = async (files: File[]) => {
@@ -222,6 +226,11 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
       }
       sentNow.push(...toSend.map((x) => x.id));
       if (sentNow.length) updateAtts((x) => x.map((y) => (sentNow.includes(y.id) ? { ...y, sent: true } : y)));
+      const chosen = format ? formatById(format) : undefined;
+      if (chosen) {
+        content.push({ type: "text", text: `<formato_elegido>${chosen.name} (id: ${chosen.id})</formato_elegido>` });
+        setFormat("");
+      }
       content.push({ type: "text", text });
       history.current.push({ role: "user", content });
 
@@ -399,6 +408,50 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
             </div>
           </div>
         )}
+        {formatsOpen && (
+          <div className="mb-2 max-h-72 space-y-1 overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-1.5">
+            <button
+              type="button"
+              className={`w-full rounded-lg px-2 py-1.5 text-left text-xs ${!format ? "bg-[var(--panel)] text-white" : "text-[var(--muted)] hover:text-white"}`}
+              onClick={() => {
+                setFormat("");
+                setFormatsOpen(false);
+              }}
+            >
+              ✨ Que la IA elija el formato
+            </button>
+            {FORMATS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                className={`w-full rounded-lg px-2 py-1.5 text-left ${format === f.id ? "bg-[var(--panel)]" : "hover:bg-[var(--panel)]"}`}
+                onClick={() => {
+                  setFormat(f.id);
+                  setFormatsOpen(false);
+                }}
+              >
+                <span className="block text-xs font-semibold">
+                  {f.emoji} {f.name} <span className="font-normal text-[var(--muted)]">· {f.length}</span>
+                </span>
+                <span className="block text-[11px] text-[var(--muted)]">{f.hint}</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <button
+            type="button"
+            className={`rounded-full border px-2.5 py-1 text-[11px] ${format ? "border-[var(--accent)] text-white" : "border-[var(--line)] text-[var(--muted)] hover:text-white"}`}
+            onClick={() => setFormatsOpen((v) => !v)}
+          >
+            🎬 Formato: {format ? `${formatById(format)?.emoji} ${formatById(format)?.name}` : "lo elige la IA"} ▾
+          </button>
+          {format && (
+            <button type="button" className="text-[11px] text-[var(--muted)] hover:text-white" onClick={() => setFormat("")}>
+              ✕
+            </button>
+          )}
+        </div>
         <div className="flex items-end gap-2">
           <label
             className={`btn h-[44px] cursor-pointer px-2.5 ${working || refBusy ? "pointer-events-none opacity-50" : ""}`}
