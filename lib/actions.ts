@@ -20,6 +20,7 @@ import {
   uid,
 } from "./project";
 import { SFX_INFO } from "./sfx";
+import { styleById } from "./styles";
 import { store } from "./store";
 import {
   BACKGROUND_STYLES,
@@ -430,8 +431,13 @@ export function addMotion(o: Record<string, unknown>): string {
     x: 0.5,
     y: MOTION_DEFAULT_Y[type],
     size: 1,
-    // titles and closing cards use the brand's title typography
-    font: (type === "titulo_animado" || type === "cierre") && brand?.titleFont ? brand.titleFont : undefined,
+    // titles and closing cards use the style's (or the brand's) title typography
+    font:
+      type === "titulo_animado" || type === "cierre"
+        ? (styleById(store.get().project.styleId ?? "")?.titleFont ?? brand?.titleFont)
+        : undefined,
+    color:
+      type === "titulo_animado" || type === "cierre" ? styleById(store.get().project.styleId ?? "")?.text : undefined,
     ...f,
   };
   if (type === "emoji" && !m.value) m.value = "🔥";
@@ -706,6 +712,13 @@ export function describeProject(): string {
   if (p.effects.length) {
     L.push("Efectos visuales:");
     for (const e of p.effects) L.push(`  - [${e.id}] ${e.type} ${e.start.toFixed(2)}–${e.end.toFixed(2)}s, intensidad ${e.intensity}`);
+  }
+  if (p.styleId) {
+    const st = styleById(p.styleId);
+    if (st)
+      L.push(
+        `Estilo de edición aplicado: ${st.name} (id ${st.id}) — títulos ${st.titleFont}, textos ${st.bodyFont}, acento ${p.brandColor ?? st.accent}; sonidos ${st.sounds.appear}/${st.sounds.transition}/${st.sounds.emphasis}; música ${st.music}.`,
+      );
   }
   if (s.versions.length)
     L.push(

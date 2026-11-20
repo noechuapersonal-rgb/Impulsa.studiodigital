@@ -258,6 +258,8 @@ export interface Project {
   brandId?: string;
   /** animated graphic elements */
   motions?: Motion[];
+  /** editing style applied (see lib/styles.ts) */
+  styleId?: string;
   /** animated background, shown where there is no video (videos made without footage) */
   background?: Background;
 }

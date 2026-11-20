@@ -9,16 +9,22 @@ export const maxDuration = 300;
 // Claude Haiku: muy económico (fracciones de centavo por instrucción).
 // Para máxima calidad en pedidos complejos se puede usar "claude-opus-5-5".
 const MODEL = process.env.CLAUDE_MODEL || "claude-haiku-5-5";
+// "Director mode": building a whole video (or several versions) goes to a more capable model, which
+// has much better visual and editorial judgment. DIRECTOR_MODEL=off turns it off.
+const DIRECTOR_MODEL = (process.env.DIRECTOR_MODEL ?? "claude-sonnet-5-5").trim();
+const DIRECTOR_ON = !!DIRECTOR_MODEL && DIRECTOR_MODEL !== "off";
+const DIRECTOR_CREDITS = Math.max(1, Number(process.env.DIRECTOR_CREDITS || 3));
 
 let client: Anthropic | null = null;
 
 // Models with preserved thinking: their reasoning blocks are tied to the exact conversation that
 // produced them. If anything earlier changes (a new deploy with updated instructions, edited AI
 // rules), drop those old blocks instead of failing the request.
-const BOUND_THINKING = /claude-(haiku|sonnet|opus)-5-5|claude-(fable|mythos)-5-[12]/.test(MODEL);
+const withFallbacks = (model: string) => /claude-(sonnet|opus)-5-5|claude-fable-5-[12]/.test(model);
+const boundThinking = (model: string) => /claude-(haiku|sonnet|opus)-5-5|claude-(fable|mythos)-5-[12]/.test(model);
 
 export async function POST(req: Request) {
-  let body: { messages?: Anthropic.Beta.BetaMessageParam[] };
+  let body: { messages?: Anthropic.Beta.BetaMessageParam[]; director?: boolean };
   try {
     body = await req.json();
   } catch {
@@ -34,7 +40,9 @@ export async function POST(req: Request) {
   const last = messages[messages.length - 1];
   const isNewInstruction =
     last?.role === "user" && Array.isArray(last.content) && last.content.some((b) => b.type === "text");
-  const guard = await guardAi(isNewInstruction);
+  const director = DIRECTOR_ON && body.director === true;
+  const model = director ? DIRECTOR_MODEL : MODEL;
+  const guard = await guardAi(isNewInstruction ? (director ? DIRECTOR_CREDITS : 1) : false);
   if (guard instanceof Response) return guard;
   const usage = guard.usage;
 
@@ -42,11 +50,16 @@ export async function POST(req: Request) {
   client ??= new Anthropic();
   try {
     const stream = client.beta.messages.stream({
-      model: MODEL,
-      ...(BOUND_THINKING
+      model,
+      ...(boundThinking(model)
         ? {
-            betas: ["thinking-binding-controls-2026-08-01"],
+            betas: [
+              "thinking-binding-controls-2026-08-01",
+              // if the stronger models decline a request, the API retries it on a fallback model
+              ...(withFallbacks(model) ? ["server-side-fallback-2026-07-01"] : []),
+            ],
             thinking: { type: "adaptive" as const, block_binding: { prefix_mismatch_behavior: "drop_block" as const } },
+            ...(withFallbacks(model) ? { fallbacks: "default" as const } : {}),
           }
         : {}),
       max_tokens: 32000,
@@ -75,7 +88,7 @@ export async function POST(req: Request) {
         refused: true,
       });
     }
-    return Response.json({ content: msg.content, stop_reason: msg.stop_reason, usage });
+    return Response.json({ content: msg.content, stop_reason: msg.stop_reason, usage, director });
   } catch (error) {
     if (error instanceof Anthropic.AuthenticationError) {
       return Response.json({ error: "La clave de la API de Claude no es válida." }, { status: 500 });

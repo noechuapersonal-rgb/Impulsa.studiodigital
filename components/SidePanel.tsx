@@ -5,6 +5,8 @@ import * as A from "@/lib/actions";
 import { addFiles, addVideoSound, assetUses, removeAsset, WHISPER_MODELS } from "@/lib/media";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
+import { applyEditStyle } from "@/lib/applyStyle";
+import { EDIT_STYLES } from "@/lib/styles";
 import { store, useEditor } from "@/lib/store";
 import { narrateSubtitles, narrateText, voiceInfo, type OriginalAudio, type VoiceInfo } from "@/lib/tts";
 import {
@@ -320,6 +322,8 @@ function SubtitlesTab() {
 
       <VoiceSection />
 
+      <EditStylesGrid />
+
       <div className="space-y-2">
         <div className="label">Estilo</div>
         <VideoFontSelect />
@@ -401,6 +405,41 @@ const TEXT_PRESETS = [
   { preset: "etiqueta", label: "Etiqueta", text: "NUEVO" },
   { preset: "cta", label: "Llamada a la acción", text: "¡Sígueme!" },
 ];
+
+/** One-tap editing styles: typography, colors, subtitles and titles that go together. */
+function EditStylesGrid() {
+  const current = useEditor((s) => s.project.styleId);
+  const hasBrand = useEditor((s) => !!s.brand?.primary);
+  const [brandColors, setBrandColors] = useState(false);
+  return (
+    <div className="space-y-2">
+      <div className="label">Estilo de edición (un toque)</div>
+      <div className="grid grid-cols-2 gap-1.5">
+        {EDIT_STYLES.map((st) => (
+          <button
+            key={st.id}
+            onClick={async () => {
+              const r = await applyEditStyle(st.id, { brandColors });
+              store.set({ toast: `Estilo «${r.name}» aplicado a todo el video. Podés deshacerlo con ↶.` });
+            }}
+            className={`flex items-center gap-2 rounded-lg border p-2 text-left ${current === st.id ? "border-[var(--accent)] bg-[var(--panel-2)]" : "border-[var(--line)] hover:border-[var(--muted)]"}`}
+            title={st.hint}
+          >
+            <span className="h-4 w-4 shrink-0 rounded-full" style={{ background: brandColors ? undefined : st.accent }} />
+            <span className="min-w-0 truncate text-[11px] font-semibold">
+              {st.emoji} {st.name}
+            </span>
+          </button>
+        ))}
+      </div>
+      {hasBrand && (
+        <label className="flex items-center gap-2 text-[11px] text-[var(--muted)]">
+          <input type="checkbox" checked={brandColors} onChange={(e) => setBrandColors(e.target.checked)} /> Usar el color de mi marca
+        </label>
+      )}
+    </div>
+  );
+}
 
 /** Animated background for videos made without footage. */
 function BackgroundSection() {

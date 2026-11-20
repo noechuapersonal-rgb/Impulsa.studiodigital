@@ -6,6 +6,7 @@ import { describeProject } from "@/lib/actions";
 import { executeTool, framesForAI, storyboardTimes } from "@/lib/aiExecutor";
 import { photoForAI } from "@/lib/brand";
 import { FORMATS, formatById } from "@/lib/formats";
+import { EDIT_STYLES, styleById } from "@/lib/styles";
 import {
   DEFAULT_PHOTOS_PROMPT,
   DEFAULT_REFERENCE_PROMPT,
@@ -61,6 +62,7 @@ const TOOL_LABELS: Record<string, string> = {
   set_background: "Armando el fondo animado",
   save_version: "Guardando una versión",
   add_generated_music: "Componiendo la música",
+  apply_style: "Aplicando el estilo de edición",
   select_brand: "Eligiendo la marca del proyecto",
   view_frames: "Mirando el video",
   update_item: "Ajustando un elemento",
@@ -71,6 +73,8 @@ const TOOL_LABELS: Record<string, string> = {
 
 // a video made from scratch, or several versions of it, can take many steps
 const MAX_STEPS = 30;
+const DIRECTOR_RE =
+  /\b(arm[aá]|cre[aá]|hac[eé]|gener[aá]|edit[aá]|produc[ií]|mont[aá])[a-zá-ú]*(?=\s)[^.?!]{0,80}\b(video|reel|reels|anuncio|tiktok|short|historia|publicidad|promo)|versi[oó]n(es)?\b|desde cero|sin grabar|como (este|esta|la referencia)/i;
 const MAX_REF_IMAGES = 6;
 
 type Attachment = { id: string; name: string; thumb: string; sent: boolean } & (
@@ -107,6 +111,8 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
   // trending format chosen for the next instruction ("" = the AI chooses)
   const [format, setFormat] = useState("");
   const [formatsOpen, setFormatsOpen] = useState(false);
+  const [styleId, setStyleId] = useState("");
+  const [stylesOpen, setStylesOpen] = useState(false);
   const pendingAtts = atts.filter((x) => !x.sent);
 
   const attach = async (files: File[]) => {
@@ -168,6 +174,14 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
           : "");
     if (!text || working || refBusy) return;
     const sentNow: string[] = [];
+    // whole-video builds (a new video, versions, a reference to copy, a format or style) go to the
+    // more capable "director" model; quick tweaks stay on the fast one
+    const director =
+      pending.length > 0 ||
+      !!format ||
+      !!styleId ||
+      DIRECTOR_RE.test(text) ||
+      (contentDuration(store.get().project) <= 0 && text.length > 25);
     setInput("");
     push({ role: "user", text });
     setWorking(true);
@@ -230,6 +244,11 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
       }
       sentNow.push(...toSend.map((x) => x.id));
       if (sentNow.length) updateAtts((x) => x.map((y) => (sentNow.includes(y.id) ? { ...y, sent: true } : y)));
+      const chosenStyle = styleId ? styleById(styleId) : undefined;
+      if (chosenStyle) {
+        content.push({ type: "text", text: `<estilo_elegido>${chosenStyle.name} (id: ${chosenStyle.id})</estilo_elegido>` });
+        setStyleId("");
+      }
       const chosen = format ? formatById(format) : undefined;
       if (chosen) {
         content.push({ type: "text", text: `<formato_elegido>${chosen.name} (id: ${chosen.id})</formato_elegido>` });
@@ -247,7 +266,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
           fetch("/api/assistant", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ messages: history.current }),
+            body: JSON.stringify({ messages: history.current, director }),
           });
         let res = await ask();
         let data = await res.json();
@@ -264,6 +283,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         }
         if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
         if (data.usage) setUsage(data.usage);
+        if (step === 0 && data.director) push({ role: "action", text: "🎬 Modo director: una IA más avanzada arma tu video" });
         const blocks: Block[] = data.content;
         history.current.push({ role: "assistant", content: blocks as Anthropic.Beta.BetaContentBlockParam[] });
 
@@ -317,7 +337,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         {usage && (
           <span
             className={`ml-auto text-[11px] tabular-nums ${usage.limit - usage.used <= 0 ? "text-amber-300" : "text-[var(--muted)]"}`}
-            title="Cada pedido a la IA usa 1 crédito"
+            title="Cada pedido a la IA usa 1 crédito; armar un video completo (modo director) usa 3"
           >
             Créditos restantes: {Math.max(0, usage.limit - usage.used)} de {usage.limit}
           </span>
@@ -442,16 +462,69 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
             ))}
           </div>
         )}
-        <div className="mb-1.5 flex items-center gap-1.5">
+        {stylesOpen && (
+          <div className="mb-2 max-h-72 space-y-1 overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--panel-2)] p-1.5">
+            <button
+              type="button"
+              className={`w-full rounded-lg px-2 py-1.5 text-left text-xs ${!styleId ? "bg-[var(--panel)] text-white" : "text-[var(--muted)] hover:text-white"}`}
+              onClick={() => {
+                setStyleId("");
+                setStylesOpen(false);
+              }}
+            >
+              ✨ Que la IA elija el estilo
+            </button>
+            {EDIT_STYLES.map((st) => (
+              <button
+                key={st.id}
+                type="button"
+                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left ${styleId === st.id ? "bg-[var(--panel)]" : "hover:bg-[var(--panel)]"}`}
+                onClick={() => {
+                  setStyleId(st.id);
+                  setStylesOpen(false);
+                }}
+              >
+                <span className="h-5 w-5 shrink-0 rounded-full border border-white/20" style={{ background: st.accent }} />
+                <span className="min-w-0">
+                  <span className="block text-xs font-semibold">
+                    {st.emoji} {st.name}
+                  </span>
+                  <span className="block text-[11px] text-[var(--muted)]">{st.hint}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             className={`rounded-full border px-2.5 py-1 text-[11px] ${format ? "border-[var(--accent)] text-white" : "border-[var(--line)] text-[var(--muted)] hover:text-white"}`}
-            onClick={() => setFormatsOpen((v) => !v)}
+            onClick={() => {
+              setFormatsOpen((v) => !v);
+              setStylesOpen(false);
+            }}
           >
-            🎬 Formato: {format ? `${formatById(format)?.emoji} ${formatById(format)?.name}` : "lo elige la IA"} ▾
+            🎬 {format ? `${formatById(format)?.emoji} ${formatById(format)?.name}` : "Formato: la IA"} ▾
           </button>
-          {format && (
-            <button type="button" className="text-[11px] text-[var(--muted)] hover:text-white" onClick={() => setFormat("")}>
+          <button
+            type="button"
+            className={`rounded-full border px-2.5 py-1 text-[11px] ${styleId ? "border-[var(--accent)] text-white" : "border-[var(--line)] text-[var(--muted)] hover:text-white"}`}
+            onClick={() => {
+              setStylesOpen((v) => !v);
+              setFormatsOpen(false);
+            }}
+          >
+            🎨 {styleId ? `${styleById(styleId)?.emoji} ${styleById(styleId)?.name}` : "Estilo: la IA"} ▾
+          </button>
+          {(format || styleId) && (
+            <button
+              type="button"
+              className="text-[11px] text-[var(--muted)] hover:text-white"
+              onClick={() => {
+                setFormat("");
+                setStyleId("");
+              }}
+            >
               ✕
             </button>
           )}

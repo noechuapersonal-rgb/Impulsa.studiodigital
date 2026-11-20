@@ -1,6 +1,7 @@
 "use client";
 
 import * as A from "./actions";
+import { applyEditStyle } from "./applyStyle";
 import { applyBrand, chooseProjectBrand, describeBrand, findBrandByName } from "./brand";
 import { addGeneratedMusic, WHISPER_MODELS } from "./media";
 import { getPlayer } from "./player";
@@ -139,6 +140,10 @@ export async function executeTool(name: string, input: Input): Promise<ToolOutpu
     case "set_background": {
       const b = A.setBackground(input as Parameters<typeof A.setBackground>[0]);
       return `Fondo: ${b.style}, base ${b.base}, acento ${b.accent}.`;
+    }
+    case "apply_style": {
+      const st = await applyEditStyle(String(input.style ?? ""), { brandColors: input.brand_colors === true });
+      return `Estilo «${st.name}» aplicado: títulos ${st.titleFont}, textos ${st.bodyFont}, acento ${st.usedAccent}, subtítulos ${st.subtitles.preset}. Usá estos sonidos: «${st.sounds.appear}» al aparecer cada elemento, «${st.sounds.transition}» en cada corte, «${st.sounds.emphasis}» en el momento más fuerte; transiciones «${st.transitions}»; música «${st.music}». Notas: ${st.notes}`;
     }
     case "add_generated_music": {
       const r = await addGeneratedMusic(input as Parameters<typeof addGeneratedMusic>[0]);

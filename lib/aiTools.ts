@@ -1,5 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { formatsForPrompt } from "./formats";
+import { stylesForPrompt } from "./styles";
 
 /** Tools the AI editor can call. They are executed in the user's browser (see lib/aiExecutor.ts). */
 
@@ -307,6 +308,19 @@ Todos: start/end en segundos, position o x/y (centro, 0–1), size (1 = normal),
     },
   },
   {
+    name: "apply_style",
+    description:
+      "Aplica un ESTILO DE EDICIÓN completo al video (par de tipografías, color de acento, subtítulos, títulos, contornos y fondo). Llamalo AL PRINCIPIO de todo video que armes, antes de agregar elementos; después usa los sonidos, transiciones y música que indica el estilo. brand_colors: usar el color de la marca en lugar del del estilo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        style: { type: "string", enum: ["creador", "premium", "tech", "urbano", "calido", "profesional", "pop", "editorial"] },
+        brand_colors: { type: "boolean" },
+      },
+      required: ["style"],
+    },
+  },
+  {
     name: "add_generated_music",
     description:
       "Compone MÚSICA ORIGINAL de fondo (sin derechos de autor, no hace falta que el cliente suba nada) del largo del video y la agrega abajo de todo. Estilos: energetica (electrónica con pulso, anuncios, ofertas, tecnología), corporativa (alegre y limpia: servicios, cursos, marcas), chill (lo-fi relajado: gastronomía, moda, lifestyle), emotiva (piano: historias, testimonios). Úsala en todo video armado de cero o cuando pidan música y no subieron una. Llamala AL FINAL, cuando el video ya tiene su largo definitivo. Con align (por defecto true) los elementos animados se corren al pulso más cercano.",
@@ -524,8 +538,12 @@ Cuando el mensaje trae <video_de_referencia>, el cliente quiere que su video que
 5. En la respuesta, cuenta en viñetas qué tomaste de la referencia y, con honestidad, qué no se pudo recrear (por ejemplo una pantalla de una app muy específica). Para eso sugiere una alternativa concreta: subir capturas o fotos para mostrarlas en esos momentos.
 
 ## Fotos de referencia adjuntadas en el chat
+## Estilos de edición (criterio visual)
+No improvises tipografías, colores ni sonidos: cada video usa UNO de estos estilos, elegido según el rubro y el tono (o el que pidió el cliente con <estilo_elegido>). Llamá a apply_style primero y respetá el estilo en todo: sus sonidos (aparición en cada elemento, transición en cada corte, énfasis en el momento más fuerte), su tipo de transición (add_transitions), su música (add_generated_music) y sus notas. Si el cliente tiene marca, usa brand_colors true salvo en versiones donde busques otro look.
+${stylesForPrompt()}
+
 ## Varias versiones
-Si piden varias versiones, opciones o variantes (máximo 3; si no dicen cuántas, 3): arma la primera completa y llama a save_version; después, para cada una de las siguientes, cambia lo que la diferencia (otro gancho, otro formato, otro estilo de subtítulos o colores, otro orden) y vuelve a llamar a save_version. Para rehacer el guion de una versión, borra la voz, los subtítulos y los elementos animados (clear: voice, subtitles, motions) y vuelve a armarlos. Las diferencias tienen que notarse en los primeros 3 segundos. La última versión queda en pantalla. En la respuesta, una viñeta por versión diciendo en qué se diferencia, y que las puede comparar abajo del visor, en «Versiones».
+Si piden varias versiones, opciones o variantes (máximo 3; si no dicen cuántas, 3): arma la primera completa y llama a save_version; después, para cada una de las siguientes, cambia lo que la diferencia: cada versión con OTRO estilo de edición (apply_style) y otro gancho (y, si encaja, otro formato), con sus sonidos y su música y vuelve a llamar a save_version. Para rehacer el guion de una versión, borra la voz, los subtítulos y los elementos animados (clear: voice, subtitles, motions) y vuelve a armarlos. Las diferencias tienen que notarse en los primeros 3 segundos. La última versión queda en pantalla. En la respuesta, una viñeta por versión diciendo en qué se diferencia, y que las puede comparar abajo del visor, en «Versiones».
 
 ## Formatos de tendencia
 Cuando armes un video nuevo (sin grabar, con varios clips, o cuando pidan "un Reel", "un anuncio", "un video para Instagram"), basalo en uno de estos formatos probados. Si el mensaje trae <formato_elegido>, usa ESE formato. Si no, elige el que mejor encaje con lo que vende y el objetivo, y menciónalo en tu respuesta en pocas palabras ("Usé el formato «Paso a paso»"). Adapta los tiempos a la duración pedida y a lo que dice la voz, y reemplaza lo que está entre [corchetes] por el contenido real del cliente (nunca dejes placeholders).
