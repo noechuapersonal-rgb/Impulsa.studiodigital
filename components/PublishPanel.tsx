@@ -4,6 +4,7 @@ import { useState } from "react";
 import { describeProject, transcriptForAI } from "@/lib/actions";
 import { describeBrand } from "@/lib/brand";
 import { transcribeTimeline } from "@/lib/media";
+import { contentDuration } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 import Field from "./Field";
 
@@ -11,7 +12,7 @@ const PLATFORMS = ["Instagram", "TikTok", "Facebook", "Estado de WhatsApp"];
 
 export default function PublishPanel() {
   const brand = useEditor((s) => s.brand);
-  const hasVideo = useEditor((s) => s.project.clips.length > 0);
+  const hasVideo = useEditor((s) => contentDuration(s.project) > 0);
   const transcribed = useEditor((s) => s.project.clips.some((c) => !!s.transcripts[c.assetId]));
   const [platform, setPlatform] = useState("Instagram");
   const [notes, setNotes] = useState("");

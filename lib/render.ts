@@ -1,5 +1,5 @@
 import { drawMotion } from "./motion";
-import type { Cue, Effect, Fit, Overlay, Project, SubtitleStyle } from "./types";
+import type { Background, Cue, Effect, Fit, Overlay, Project, SubtitleStyle } from "./types";
 
 export type Drawable = HTMLVideoElement | HTMLImageElement;
 
@@ -125,6 +125,14 @@ export function drawFrame(ctx: CanvasRenderingContext2D, f: FrameInput) {
 
   if (video && video.readyState >= 2) {
     drawVideoLayer(ctx, video, W, H, project.fit, zoom, dx, dy, filters.join(" "));
+  } else if (project.background || !project.clips.length) {
+    // videos made without footage: animated background (brand colors by default)
+    ctx.save();
+    ctx.translate(W / 2 + dx, H / 2 + dy);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-W / 2, -H / 2);
+    drawBackground(ctx, project.background ?? { style: "degradado", colors: ["#0f0f1a", BRAND_COLOR] }, t, W, H);
+    ctx.restore();
   }
   ctx.filter = "none";
 
@@ -180,12 +188,100 @@ export function drawFrame(ctx: CanvasRenderingContext2D, f: FrameInput) {
   }
 
   for (const m of project.motions ?? []) {
-    if (t >= m.start && t < m.end) drawMotion(ctx, m, t, W, H, { font: FONT, brandColor: project.brandColor });
+    if (t >= m.start && t < m.end)
+      drawMotion(ctx, m, t, W, H, { font: FONT, brandColor: project.brandColor ?? project.background?.colors[1] });
   }
 
   const cue = project.cues.find((c) => t >= c.start && t < c.end);
   if (cue) drawSubtitle(ctx, cue, t, W, H, project.subtitleStyle);
   ctx.restore();
+}
+
+/** Smooth pseudo-random value in 0..1 for index i (stable between frames). */
+const rnd = (i: number) => {
+  const x = Math.sin(i * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+function withAlpha(hex: string, a: number) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return `rgba(255,255,255,${a})`;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
+
+export function drawBackground(ctx: CanvasRenderingContext2D, bg: Background, t: number, W: number, H: number) {
+  const [base, accent] = bg.colors;
+  ctx.fillStyle = base;
+  ctx.fillRect(-W * 0.1, -H * 0.1, W * 1.2, H * 1.2);
+  if (bg.style === "solido") return;
+  const R = Math.max(W, H);
+  if (bg.style === "degradado") {
+    // two big soft glows of the accent color drifting slowly
+    for (let i = 0; i < 2; i++) {
+      const x = W * (0.5 + 0.38 * Math.sin(t * 0.23 + i * 2.4));
+      const y = H * (0.5 + 0.34 * Math.cos(t * 0.19 + i * 1.7));
+      const g = ctx.createRadialGradient(x, y, 0, x, y, R * 0.7);
+      g.addColorStop(0, withAlpha(accent, i ? 0.32 : 0.45));
+      g.addColorStop(1, withAlpha(accent, 0));
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+  } else if (bg.style === "grilla") {
+    const g = ctx.createRadialGradient(W / 2, H * 0.4, 0, W / 2, H * 0.4, R * 0.75);
+    g.addColorStop(0, withAlpha(accent, 0.28));
+    g.addColorStop(1, withAlpha(accent, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    const step = Math.min(W, H) / 9;
+    const off = (t * step * 0.25) % step;
+    ctx.strokeStyle = withAlpha(accent, 0.16);
+    ctx.lineWidth = Math.max(1, step / 60);
+    ctx.beginPath();
+    for (let x = -step + off; x < W + step; x += step) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, H);
+    }
+    for (let y = -step + off; y < H + step; y += step) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+    }
+    ctx.stroke();
+    // a few glowing dots travelling along the grid
+    for (let i = 0; i < 6; i++) {
+      const p = (t * 0.12 + rnd(i)) % 1;
+      const vertical = i % 2 === 0;
+      const x = vertical ? Math.round(rnd(i + 9) * 8) * step + off : p * W;
+      const y = vertical ? p * H : Math.round(rnd(i + 19) * 14) * step + off;
+      const gl = ctx.createRadialGradient(x, y, 0, x, y, step * 0.6);
+      gl.addColorStop(0, withAlpha(accent, 0.9));
+      gl.addColorStop(1, withAlpha(accent, 0));
+      ctx.fillStyle = gl;
+      ctx.fillRect(x - step, y - step, step * 2, step * 2);
+    }
+  } else if (bg.style === "luces") {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, withAlpha(accent, 0.18));
+    g.addColorStop(1, withAlpha(accent, 0));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < 22; i++) {
+      const r = (0.03 + rnd(i + 3) * 0.09) * R;
+      const x = ((rnd(i) + t * 0.012 * (0.5 + rnd(i + 7))) % 1.2 - 0.1) * W;
+      const y = ((rnd(i + 11) - t * 0.02 * (0.4 + rnd(i + 5)) + 10) % 1.2 - 0.1) * H;
+      const gl = ctx.createRadialGradient(x, y, 0, x, y, r);
+      gl.addColorStop(0, withAlpha(accent, 0.1 + rnd(i + 13) * 0.25));
+      gl.addColorStop(1, withAlpha(accent, 0));
+      ctx.fillStyle = gl;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+  }
+  // soft vignette so texts stand out
+  const v = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.3, W / 2, H / 2, R * 0.75);
+  v.addColorStop(0, "rgba(0,0,0,0)");
+  v.addColorStop(1, "rgba(0,0,0,0.55)");
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, W, H);
 }
 
 function drawVideoLayer(

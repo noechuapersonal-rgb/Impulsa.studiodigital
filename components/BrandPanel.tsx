@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { applyBrand, chooseProjectBrand, deleteBrand, emptyBrand, findBrandByName, logoToDataUrl, saveBrand } from "@/lib/brand";
 import { uid } from "@/lib/project";
+import { contentDuration } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 import type { BrandKit } from "@/lib/types";
 import ColorField from "./ColorField";
@@ -12,7 +13,7 @@ import FontPicker from "./FontPicker";
 export default function BrandPanel() {
   const saved = useEditor((s) => s.brand);
   const brands = useEditor((s) => s.brands);
-  const hasVideo = useEditor((s) => s.project.clips.length > 0);
+  const hasVideo = useEditor((s) => contentDuration(s.project) > 0);
   const [b, setB] = useState<BrandKit>(saved ?? emptyBrand());
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);

@@ -5,10 +5,22 @@ import { addFiles } from "@/lib/media";
 import { getPlayer, Player, setPlayer } from "@/lib/player";
 import AddMenu from "./AddMenu";
 import VoiceRecorder from "./VoiceRecorder";
+import { setBackground, setFormat } from "@/lib/actions";
 import { canvasSize, contentDuration, fmt } from "@/lib/project";
 import { overlayBounds } from "@/lib/render";
 import { store, useEditor } from "@/lib/store";
 import type { Project } from "@/lib/types";
+
+/** Starts a video made only with animated elements, voice-over and subtitles (no footage). */
+function startWithoutFootage() {
+  setFormat({ aspect: "9:16" });
+  setBackground({});
+  window.dispatchEvent(
+    new CustomEvent("impulsa-chat-prefill", {
+      detail: "Armame un video sin grabar para Instagram de unos 30 segundos sobre ",
+    }),
+  );
+}
 
 export default function Preview() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -17,7 +29,8 @@ export default function Preview() {
   const playing = useEditor((s) => s.playing);
   const aspect = useEditor((s) => s.project.aspect);
   const duration = useEditor((s) => contentDuration(s.project));
-  const empty = useEditor((s) => s.assets.length === 0 && s.missingAssets.length === 0);
+  // nothing to show yet: no files and nothing on the timeline (videos without footage count as content)
+  const empty = useEditor((s) => s.assets.length === 0 && s.missingAssets.length === 0 && contentDuration(s.project) <= 0);
   const waitingFiles = useEditor((s) => s.assets.length === 0 && s.missingAssets.length > 0);
   const picking = useEditor((s) => !!s.eyedropper);
   const [hoverColor, setHoverColor] = useState<string | null>(null);
@@ -217,6 +230,17 @@ export default function Preview() {
               También fotos (logos, imágenes) y música. Todo se procesa en tu navegador.
             </div>
             <span className="btn btn-primary mt-2">Elegir archivos</span>
+            <button
+              type="button"
+              className="mt-1 rounded-xl border border-[var(--accent)]/50 bg-[var(--accent)]/10 px-4 py-2 text-sm font-semibold hover:bg-[var(--accent)]/20"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                startWithoutFootage();
+              }}
+            >
+              ✨ O pedile a la IA un video sin grabar
+            </button>
             <input
               type="file"
               multiple

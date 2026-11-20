@@ -14,7 +14,7 @@ import {
 } from "@/lib/chatReference";
 import { imageThumb } from "@/lib/media";
 import { getPlayer } from "@/lib/player";
-import { uid } from "@/lib/project";
+import { contentDuration, uid } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 
 type Msg = Anthropic.Beta.BetaMessageParam;
@@ -56,6 +56,7 @@ const TOOL_LABELS: Record<string, string> = {
   apply_brand: "Aplicando tu marca",
   add_motion: "Agregando un elemento animado",
   add_transitions: "Poniendo transiciones",
+  set_background: "Armando el fondo animado",
   select_brand: "Eligiendo la marca del proyecto",
   view_frames: "Mirando el video",
   update_item: "Ajustando un elemento",
@@ -132,6 +133,22 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
 
   const push = (it: UiItem) => setItems((x) => [...x, it]);
 
+  // other parts of the editor can start a message for the user to complete
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const on = (e: Event) => {
+      setInput((e as CustomEvent<string>).detail);
+      setTimeout(() => {
+        const el = inputRef.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(el.value.length, el.value.length);
+      }, 50);
+    };
+    window.addEventListener("impulsa-chat-prefill", on);
+    return () => window.removeEventListener("impulsa-chat-prefill", on);
+  }, []);
+
   async function send(raw: string) {
     const pending = attsRef.current.filter((x) => !x.sent);
     const text =
@@ -172,7 +189,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         }
       }
       // storyboard: frames across the whole edited video so the AI knows what it contains
-      if (store.get().project.clips.length) {
+      if (contentDuration(store.get().project) > 0) {
         try {
           const frames = await framesForAI(storyboardTimes(), 320);
           content.push({ type: "text", text: "Tira de fotogramas del video editado (segundos de la línea de tiempo):" });
@@ -402,6 +419,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
             />
           </label>
           <textarea
+            ref={inputRef}
             className="input min-h-[44px] resize-none"
             rows={2}
             placeholder={

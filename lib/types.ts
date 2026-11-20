@@ -163,6 +163,20 @@ export const EFFECT_LABELS: Record<EffectType, string> = {
   zoom_entrada: "Transición zoom",
 };
 
+export const BACKGROUND_STYLES = ["degradado", "grilla", "luces", "solido"] as const;
+export type BackgroundStyle = (typeof BACKGROUND_STYLES)[number];
+export const BACKGROUND_LABELS: Record<BackgroundStyle, string> = {
+  degradado: "Degradado en movimiento",
+  grilla: "Grilla tecnológica",
+  luces: "Luces (bokeh)",
+  solido: "Color liso",
+};
+export interface Background {
+  style: BackgroundStyle;
+  /** [base, accent] */
+  colors: [string, string];
+}
+
 /** Animated graphic elements ("elementos animados") drawn on top of the video. */
 export const MOTION_TYPES = [
   "titulo_animado",
@@ -244,6 +258,8 @@ export interface Project {
   brandId?: string;
   /** animated graphic elements */
   motions?: Motion[];
+  /** animated background, shown where there is no video (videos made without footage) */
+  background?: Background;
 }
 
 /** Every brand of an account plus the style references (shared by all brands). */

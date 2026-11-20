@@ -110,7 +110,11 @@ export function contentDuration(p: Project): number {
   let d = totalDuration(p);
   if (p.clips.length === 0) {
     for (const o of p.overlays) d = Math.max(d, o.end);
-    for (const a of p.audio) d = Math.max(d, a.start + a.duration);
+    for (const a of p.audio) if (!a.loop) d = Math.max(d, a.start + a.duration);
+    for (const m of p.motions ?? []) d = Math.max(d, m.end);
+    for (const c of p.cues) d = Math.max(d, c.end);
+    // background music alone doesn't set the length (it loops), unless it's the only thing there
+    if (d === 0) for (const a of p.audio) d = Math.max(d, a.start + a.duration);
   }
   return d;
 }

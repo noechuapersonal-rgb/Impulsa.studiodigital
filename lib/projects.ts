@@ -3,7 +3,7 @@
 import { idbAll, idbDelete, idbGet, idbPut, MEDIA, PROJECTS } from "./idb";
 import { probeFile } from "./media";
 import { getPlayer } from "./player";
-import { emptyProject } from "./project";
+import { contentDuration, emptyProject } from "./project";
 import { store } from "./store";
 import type { Asset, AssetMeta, Project, Segment } from "./types";
 
@@ -66,7 +66,7 @@ export async function saveCurrentProject(): Promise<"cuenta" | "dispositivo"> {
   let thumb: string | null = null;
   try {
     const shot = getPlayer()?.snapshot(240);
-    if (shot && s.project.clips.length) thumb = `data:image/jpeg;base64,${shot}`;
+    if (shot && contentDuration(s.project) > 0) thumb = `data:image/jpeg;base64,${shot}`;
   } catch {
     /* canvas not ready */
   }

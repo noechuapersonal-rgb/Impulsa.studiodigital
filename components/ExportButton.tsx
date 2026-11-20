@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { exportFileName } from "@/lib/actions";
 import { getPlayer } from "@/lib/player";
-import { totalDuration } from "@/lib/project";
+import { contentDuration } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 
 type Result = { url: string; name: string; file: File };
@@ -28,12 +28,12 @@ export default function ExportButton({ disabled }: { disabled: boolean }) {
   const [result, setResult] = useState<Result | null>(null);
   const [note, setNote] = useState("");
   const [confirming, setConfirming] = useState(false);
-  const videoLength = useEditor((st) => totalDuration(st.project));
+  const videoLength = useEditor((st) => contentDuration(st.project));
 
   const run = async () => {
     setConfirming(false);
     const p = getPlayer();
-    if (!p || !totalDuration(store.get().project)) return;
+    if (!p || !contentDuration(store.get().project)) return;
     setResult(null);
     setNote("");
     setProgress(0);

@@ -158,11 +158,16 @@ type Word = { w: string; box: boolean; accent: boolean };
 
 export function parseTitle(text: string): Word[] {
   const out: Word[] = [];
-  const re = /\[([^\]]+)\]|\*([^*]+)\*|(\S+)/g;
+  // punctuation right after a group ("[CHAT]?") stays glued to its last word
+  const re = /\[([^\]]+)\]([^\s[*]*)|\*([^*]+)\*([^\s[*]*)|(\S+)/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text))) {
-    const inner = m[1] ?? m[2] ?? m[3] ?? "";
-    for (const w of inner.split(/\s+/).filter(Boolean)) out.push({ w, box: m[1] !== undefined, accent: m[2] !== undefined });
+    const box = m[1] !== undefined;
+    const accent = m[3] !== undefined;
+    const words = (m[1] ?? m[3] ?? m[5] ?? "").split(/\s+/).filter(Boolean);
+    const tail = m[2] ?? m[4] ?? "";
+    if (tail && words.length) words[words.length - 1] += tail;
+    for (const w of words) out.push({ w, box, accent });
   }
   return out;
 }

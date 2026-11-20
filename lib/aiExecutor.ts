@@ -4,7 +4,7 @@ import * as A from "./actions";
 import { applyBrand, chooseProjectBrand, describeBrand, findBrandByName } from "./brand";
 import { WHISPER_MODELS } from "./media";
 import { getPlayer } from "./player";
-import { totalDuration } from "./project";
+import { contentDuration } from "./project";
 import { store } from "./store";
 import { narrateSubtitles, narrateText, type OriginalAudio } from "./tts";
 
@@ -21,8 +21,8 @@ export type ToolOutput =
 /** Frames of the edited video at the given times, labeled, ready to show the AI. */
 export async function framesForAI(times: number[], maxSide = 360): Promise<Exclude<ToolOutput, string>> {
   const player = getPlayer();
-  const dur = totalDuration(store.get().project);
-  if (!player || dur <= 0) return [{ type: "text", text: "No hay video en la línea de tiempo." }];
+  const dur = contentDuration(store.get().project);
+  if (!player || dur <= 0) return [{ type: "text", text: "Todavía no hay nada en la línea de tiempo." }];
   const ts = times.map((t) => Math.min(Math.max(0, t), Math.max(0, dur - 0.05)));
   const frames = await player.renderFrames(ts, maxSide);
   return frames.flatMap((f) => [
@@ -33,7 +33,7 @@ export async function framesForAI(times: number[], maxSide = 360): Promise<Exclu
 
 /** Evenly spaced frames covering the whole video (the "storyboard" sent with each instruction). */
 export function storyboardTimes(): number[] {
-  const dur = totalDuration(store.get().project);
+  const dur = contentDuration(store.get().project);
   if (dur <= 0) return [];
   const n = Math.max(3, Math.min(8, Math.round(dur / 5)));
   return Array.from({ length: n }, (_, i) => (dur * (i + 0.5)) / n);
@@ -116,13 +116,17 @@ export async function executeTool(name: string, input: Input): Promise<ToolOutpu
         : undefined;
       const text = typeof input.text === "string" ? input.text.trim() : "";
       if (text) {
-        const end = await narrateText(text, {
+        const { end, lines } = await narrateText(text, {
           start: typeof input.start === "number" ? input.start : 0,
           lang,
           original,
           subtitles: input.subtitles !== false,
         });
-        return `Listo: voz en off agregada, termina en el segundo ${end.toFixed(1)}${input.subtitles !== false ? " (con subtítulos sincronizados)" : ""}.`;
+        return [
+          `Listo: voz en off agregada, termina en el segundo ${end.toFixed(1)}${input.subtitles !== false ? " (con subtítulos sincronizados)" : ""}.`,
+          "Cuándo suena cada frase (úsalo para ubicar los elementos animados y las imágenes):",
+          ...lines.map((l) => `[${l.start.toFixed(1)}–${l.end.toFixed(1)} s] ${l.text}`),
+        ].join("\n");
       }
       const n = await narrateSubtitles({ lang, original });
       return `Listo: la voz lee ${n} frases de los subtítulos.`;
@@ -130,6 +134,10 @@ export async function executeTool(name: string, input: Input): Promise<ToolOutpu
     case "add_motion": {
       const id = A.addMotion(input);
       return `Elemento animado agregado [${id}].`;
+    }
+    case "set_background": {
+      const b = A.setBackground(input as Parameters<typeof A.setBackground>[0]);
+      return `Fondo: ${b.style}, base ${b.base}, acento ${b.accent}.`;
     }
     case "add_transitions": {
       const n = A.addTransitions(input as Parameters<typeof A.addTransitions>[0]);

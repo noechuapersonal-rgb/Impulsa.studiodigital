@@ -22,6 +22,7 @@ import {
 import { SFX_INFO } from "./sfx";
 import { store } from "./store";
 import {
+  BACKGROUND_STYLES,
   EFFECT_TYPES,
   MOTION_TYPES,
   SFX_NAMES,
@@ -29,6 +30,7 @@ import {
   type Aspect,
   type Asset,
   type AssetKind,
+  type BackgroundStyle,
   type EffectType,
   type Fit,
   type Motion,
@@ -437,6 +439,16 @@ export function addMotion(o: Record<string, unknown>): string {
   return id;
 }
 
+/** Animated background for videos made without footage. Colors default to the brand's. */
+export function setBackground(o: { style?: string; base?: string; accent?: string }) {
+  const style = (BACKGROUND_STYLES as readonly string[]).includes(String(o.style)) ? (o.style as BackgroundStyle) : "degradado";
+  const b = store.get().brand;
+  const base = hex(o.base) ?? "#0d0d16";
+  const accent = hex(o.accent) ?? b?.primary ?? store.get().project.brandColor ?? "#7c3aed";
+  store.edit((p) => ({ ...p, background: { style, colors: [base, accent] } }));
+  return { style, base, accent };
+}
+
 /** Puts a transition (and optionally a whoosh) at every cut between clips. */
 export function addTransitions(o: { style?: string; sound?: boolean; intensity?: number }): number {
   const p = store.get().project;
@@ -695,6 +707,10 @@ export function describeProject(): string {
     L.push("Efectos visuales:");
     for (const e of p.effects) L.push(`  - [${e.id}] ${e.type} ${e.start.toFixed(2)}–${e.end.toFixed(2)}s, intensidad ${e.intensity}`);
   }
+  if (!p.clips.length)
+    L.push(
+      `Sin clips de video (video sin grabar). Fondo animado: ${p.background ? `${p.background.style}, colores ${p.background.colors.join(" y ")}` : "degradado con el color de la marca (por defecto)"}.`,
+    );
   if (p.motions?.length) {
     L.push("Elementos animados:");
     for (const m of p.motions) {

@@ -7,7 +7,15 @@ import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { store, useEditor } from "@/lib/store";
 import { narrateSubtitles, narrateText, voiceInfo, type OriginalAudio, type VoiceInfo } from "@/lib/tts";
-import { EFFECT_LABELS, EFFECT_TYPES, SFX_NAMES, type SfxName, type SubtitlePreset } from "@/lib/types";
+import {
+  BACKGROUND_LABELS,
+  BACKGROUND_STYLES,
+  EFFECT_LABELS,
+  EFFECT_TYPES,
+  SFX_NAMES,
+  type SfxName,
+  type SubtitlePreset,
+} from "@/lib/types";
 import BrandPanel from "./BrandPanel";
 import ColorField from "./ColorField";
 import Field from "./Field";
@@ -105,6 +113,7 @@ function MediaTab() {
           }}
         />
       </label>
+      <BackgroundSection />
       {!assets.length && (
         <p className="text-sm text-[var(--muted)]">
           Aún no hay archivos. Todo lo que subas se agrega solo: los videos al final, las fotos donde está parado el video
@@ -392,6 +401,53 @@ const TEXT_PRESETS = [
   { preset: "etiqueta", label: "Etiqueta", text: "NUEVO" },
   { preset: "cta", label: "Llamada a la acción", text: "¡Sígueme!" },
 ];
+
+/** Animated background for videos made without footage. */
+function BackgroundSection() {
+  const bg = useEditor((s) => s.project.background);
+  const hasClips = useEditor((s) => s.project.clips.length > 0);
+  const brandColor = useEditor((s) => s.brand?.primary);
+  const [open, setOpen] = useState(false);
+  if (hasClips && !bg && !open) return null;
+  const cur = bg ?? { style: "degradado" as const, colors: ["#0d0d16", brandColor ?? "#7c3aed"] as [string, string] };
+  const set = (patch: Partial<typeof cur>) => store.edit((p) => ({ ...p, background: { ...cur, ...patch } }));
+  return (
+    <div className="space-y-2 rounded-xl border border-[var(--line)] p-3">
+      <div className="flex items-center justify-between">
+        <span className="label">Fondo animado</span>
+        {bg && (
+          <button className="text-[11px] text-[var(--muted)] hover:text-red-400" onClick={() => store.edit((p) => ({ ...p, background: undefined }))}>
+            Quitar
+          </button>
+        )}
+      </div>
+      <p className="text-[11px] text-[var(--muted)]">
+        Para videos sin grabar: se ve donde no hay video. Arriba van los elementos animados, la voz y los subtítulos.
+      </p>
+      <select
+        id="bg-style"
+        className="input"
+        value={cur.style}
+        onChange={(e) => set({ style: e.target.value as typeof cur.style })}
+        onFocus={() => setOpen(true)}
+      >
+        {BACKGROUND_STYLES.map((st) => (
+          <option key={st} value={st}>
+            {BACKGROUND_LABELS[st]}
+          </option>
+        ))}
+      </select>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Fondo">
+          <ColorField id="bg-base" value={cur.colors[0]} onChange={(c) => set({ colors: [c, cur.colors[1]] })} />
+        </Field>
+        <Field label="Luces">
+          <ColorField id="bg-accent" value={cur.colors[1]} onChange={(c) => set({ colors: [cur.colors[0], c] })} />
+        </Field>
+      </div>
+    </div>
+  );
+}
 
 /** Typography of every text and subtitle of this video. */
 function VideoFontSelect() {

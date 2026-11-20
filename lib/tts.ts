@@ -434,5 +434,5 @@ export async function narrateText(
       ),
     }));
   }
-  return placed.length ? placed[placed.length - 1].end : at;
+  return { end: placed.length ? placed[placed.length - 1].end : at, lines: placed };
 }

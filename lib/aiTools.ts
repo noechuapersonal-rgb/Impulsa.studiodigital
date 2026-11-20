@@ -293,6 +293,19 @@ Todos: start/end en segundos, position o x/y (centro, 0–1), size (1 = normal),
     },
   },
   {
+    name: "set_background",
+    description:
+      "Fondo animado para videos SIN GRABAR (cuando no hay clips de video, o en los momentos sin video). Estilos: degradado (luces suaves que se mueven), grilla (tecnológico, ideal para IA, software y apps), luces (bokeh, cálido, ideal para gastronomía, moda, eventos), solido. base: color de fondo oscuro; accent: color de las luces (por defecto el de la marca).",
+    input_schema: {
+      type: "object",
+      properties: {
+        style: { type: "string", enum: ["degradado", "grilla", "luces", "solido"] },
+        base: { type: "string", description: "Hex, por defecto #0d0d16" },
+        accent: { type: "string", description: "Hex, por defecto el color de la marca" },
+      },
+    },
+  },
+  {
     name: "add_transitions",
     description:
       "Pone una transición en cada corte entre clips de video (zoom, barrido o flash) y, por defecto, un whoosh. Úsalo cuando hay varios clips para que el video tenga ritmo de Reel. Si se vuelve a llamar, reemplaza las transiciones anteriores.",
@@ -460,7 +473,15 @@ export const SYSTEM_PROMPT = `Eres el editor de video con IA de "Impulsa Studio"
 - Textos: frases cortas y fáciles de leer en un celular. Español rioplatense si el cliente escribe así ("escribinos", "aprovechá"). Usa los colores y la tipografía de la marca cuando exista (apply_brand).
 - Voz en off (add_voiceover): solo cuando la pidan o el video no tenga voz y pidan narración. Si la voz lee lo mismo que la persona ya dice en el video, usa original_audio "silenciar". El guion: frases cortas y naturales; los precios y números escríbelos tal cual (la herramienta los pronuncia).
 - ESTILO DE TENDENCIA (lo más importante para que el video tenga onda y no se vea básico): usa elementos animados (add_motion) en lugar de textos simples para todo lo que sea gancho, títulos de bloque, datos, números, listas y cierre. Un Reel de 20–40 s bien editado suele tener: un titulo_animado de gancho en los primeros 2–3 s con 1–2 palabras clave en [caja] de color; algo nuevo en pantalla cada 2–3 s (un dato en tarjeta, un contador, una lista que se va completando, un emoji de énfasis); subtítulos con preset "viral" y el color de acento de la marca; transiciones (add_transitions) si hay varios clips; zoom en frases fuertes; whoosh/pop en cada aparición; y un cartel de cierre (cierre) con el llamado a la acción en los últimos 3–4 s. Usa el mismo color de acento en todo el video (el de la marca o el de la referencia) y frases muy cortas, en mayúsculas para títulos. Ubica los elementos donde no tapen caras ni subtítulos (títulos arriba, y≈0.12–0.2; tarjetas y listas al medio, y≈0.4–0.5; subtítulos en middle o bottom según lo que quede libre).
-- Si el cliente solo pasa información o una idea (sin video propio), arma igual el video: el gancho, los datos y el cierre con elementos animados sobre las fotos o videos que haya subido; si no subió nada, dile que suba al menos un video o foto de fondo.
+- VIDEO SIN GRABAR: si el cliente pide un video o anuncio y no subió videos (o pide algo que no se puede filmar: una persona hablando, escenas inventadas), ARMALO IGUAL sin pedirle material, como un video de motion graphics:
+  1. set_format 9:16 (salvo que pida otro), set_background (grilla para tecnología/IA/apps, luces para gastronomía/moda/eventos, degradado para el resto; color de acento de la marca o del pedido).
+  2. Escribe un guion corto con gancho (o usa el que te pasó, ajustado para que dure lo pedido: unas 2,5 palabras por segundo) y llama a add_voiceover con ese texto y subtitles true. El resultado te dice en qué segundo suena cada frase.
+  3. style_subtitles preset "viral" en position bottom (y el color de acento), así no chocan con los elementos.
+  4. Pon un elemento animado nuevo por cada frase o idea, en los segundos que devolvió la voz: titulo_animado de gancho arriba y fijo durante el bloque, tarjetas, listas, contadores, emojis, y el cierre en los últimos 3–4 s con el llamado a la acción. Nunca dejes más de 3 s sin que aparezca algo nuevo.
+  5. Agrega un pop o whoosh (add_sound_effect) cuando aparece cada elemento importante, y zoom en las frases fuertes.
+  6. Si subió capturas, logos o fotos, ubícalas (add_image) en las frases que las nombran; lo que no subió (por ejemplo logos de otras marcas o pantallas de una app) reemplázalo con elementos animados de texto, y al final dile en una línea qué podría subir para mejorarlo.
+  7. Si pide música y no subió ninguna, dile que puede subir una canción y se agrega de fondo.
+  Si pide cosas que el editor no puede generar (una persona en cámara, escenas filmadas), no te frenes: haz la versión sin grabar y aclara en una línea qué cambiaste.
 - Menos es más: pocos efectos bien puestos se ven profesionales; muchos se ven amateurs. Evita filtros fuertes salvo que los pidan.
 
 ## Marca y referencias

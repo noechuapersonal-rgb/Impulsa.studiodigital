@@ -6,7 +6,7 @@ import { deleteSelection, setFormat } from "@/lib/actions";
 import { loadFont, loadLibrary } from "@/lib/brand";
 import { getPlayer } from "@/lib/player";
 import { openProject, saveCurrentProject } from "@/lib/projects";
-import { splitClipAt } from "@/lib/project";
+import { contentDuration, splitClipAt } from "@/lib/project";
 import { store, useEditor } from "@/lib/store";
 import type { Aspect, Fit } from "@/lib/types";
 import { useIsMobile } from "@/lib/useIsMobile";
@@ -48,7 +48,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
   const fit = useEditor((s) => s.project.fit);
   const canUndo = useEditor((s) => s.past.length > 0);
   const canRedo = useEditor((s) => s.future.length > 0);
-  const hasAssets = useEditor((s) => s.assets.length > 0);
+  const hasAssets = useEditor((s) => s.assets.length > 0 || contentDuration(s.project) > 0);
   const [chatOpen, setChatOpen] = useState(true);
   const isMobile = useIsMobile();
   // phone layout: one panel at a time under the video
@@ -58,7 +58,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
   const projectName = useEditor((s) => s.projectName);
   const saveState = useEditor((s) => s.saveState);
   const opened = useRef(false);
-  const hasContent = useEditor((s) => s.assets.length > 0 || s.project.clips.length > 0);
+  const hasContent = useEditor((s) => s.assets.length > 0 || contentDuration(s.project) > 0);
   const saveLabel =
     saveState === "saving"
       ? "Guardando…"
@@ -101,7 +101,7 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
         s.activeRefs !== last.activeRefs ||
         s.projectName !== last.projectName;
       last = s;
-      if (!changed || (!s.assets.length && !s.project.clips.length)) return;
+      if (!changed || (!s.assets.length && contentDuration(s.project) <= 0)) return;
       if (s.busy === "Abriendo proyecto…") return;
       if (timer) clearTimeout(timer);
       if (s.saveState !== "saving") store.set({ saveState: "saving" });
@@ -138,7 +138,11 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
       setMTab("ia");
     };
     window.addEventListener("impulsa-chat", open);
-    return () => window.removeEventListener("impulsa-chat", open);
+    window.addEventListener("impulsa-chat-prefill", open);
+    return () => {
+      window.removeEventListener("impulsa-chat", open);
+      window.removeEventListener("impulsa-chat-prefill", open);
+    };
   }, []);
 
   useEffect(() => {
