@@ -2,13 +2,14 @@
 
 import { useRef, useState } from "react";
 import * as A from "@/lib/actions";
-import { addFiles, addVideoSound } from "@/lib/media";
+import { addFiles, addGeneratedMusic, addVideoSound } from "@/lib/media";
+import { MUSIC_STYLES, type MusicStyle } from "@/lib/music";
 import { fmt, nextSlot } from "@/lib/project";
 import { SFX_INFO } from "@/lib/sfx";
 import { store } from "@/lib/store";
 import { EFFECT_LABELS, EFFECT_TYPES, MOTION_LABELS, SFX_NAMES, type MotionType, type TextPreset } from "@/lib/types";
 
-type Step = "main" | "text" | "sfx" | "fx" | "sound" | "motion";
+type Step = "main" | "text" | "sfx" | "fx" | "sound" | "motion" | "music";
 
 /** Ready-to-use examples for each animated element (the user edits them in Propiedades). */
 const MOTIONS: { type: MotionType; icon: string; hint: string; data: Record<string, unknown> }[] = [
@@ -147,6 +148,8 @@ export default function AddMenu() {
                     ? "¿Qué querés agregar?"
                     : step === "motion"
                       ? "Elegí un elemento animado"
+                      : step === "music"
+                      ? "Música de fondo"
                       : step === "text"
                       ? "Elegí un texto"
                       : step === "sfx"
@@ -173,7 +176,7 @@ export default function AddMenu() {
                     onClick={() => setStep("motion")}
                   />
                   <Option icon="T" label="Texto" hint="Va después del último texto" onClick={() => setStep("text")} />
-                  <Option icon="♪" label="Música de fondo" hint="Suena durante todo el video" onClick={() => music.current?.click()} />
+                  <Option icon="♪" label="Música de fondo" hint="Original sin derechos de autor, o subí tu canción" onClick={() => setStep("music")} />
                   <Option
                     icon="🎵"
                     label="Sonido de otro video"
@@ -187,6 +190,33 @@ export default function AddMenu() {
                   Cada cosa nueva va después de la última de su tipo. Si todavía no hay ninguna, va donde está parado el video.
                 </p>
               </>
+            )}
+
+            {step === "music" && (
+              <div className="grid gap-2">
+                <p className="text-[11px] text-[var(--muted)]">
+                  Componemos una música original del largo de tu video, sin derechos de autor (Instagram y TikTok no la
+                  silencian).
+                </p>
+                {(Object.keys(MUSIC_STYLES) as MusicStyle[]).map((k) => (
+                  <Option
+                    key={k}
+                    icon={k === "energetica" ? "⚡" : k === "corporativa" ? "😀" : k === "chill" ? "☕" : "🎹"}
+                    label={MUSIC_STYLES[k].label}
+                    hint={MUSIC_STYLES[k].hint}
+                    onClick={async () => {
+                      close();
+                      try {
+                        const r = await addGeneratedMusic({ style: k });
+                        store.set({ toast: `Listo: música ${r.label.toLowerCase()} original agregada. Dale play para escucharla.` });
+                      } catch (e) {
+                        store.set({ toast: (e as Error).message });
+                      }
+                    }}
+                  />
+                ))}
+                <Option icon="📁" label="Subir mi canción" hint="Un archivo de audio (MP3, WAV, M4A…)" onClick={() => music.current?.click()} />
+              </div>
             )}
 
             {step === "motion" && (

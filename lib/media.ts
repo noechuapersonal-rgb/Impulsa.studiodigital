@@ -2,7 +2,7 @@
 
 import { idbDelete, idbPut, MEDIA, persistStorage } from "./idb";
 import { getPlayer } from "./player";
-import { fmt, nextPhotoSlot, totalDuration, uid } from "./project";
+import { contentDuration, fmt, nextPhotoSlot, totalDuration, uid } from "./project";
 import { store } from "./store";
 import type { Asset, AssetKind, Segment } from "./types";
 
@@ -424,4 +424,67 @@ export function removeAsset(id: string) {
   getPlayer()?.seek(store.get().time);
   idbDelete(MEDIA, id).catch(() => undefined);
   store.set({ toast: `«${a.name}» se borró de Medios.` });
+}
+
+/**
+ * Composes original background music in the chosen style, as long as the video, and adds it under
+ * everything (it replaces earlier generated music). With `align`, animated elements that start close
+ * to a beat are moved onto it, so things appear with the rhythm.
+ */
+export async function addGeneratedMusic(o: { style?: string; volume?: number; align?: boolean } = {}) {
+  const { generateMusic, MUSIC_STYLES } = await import("./music");
+  const style = (Object.keys(MUSIC_STYLES) as (keyof typeof MUSIC_STYLES)[]).includes(o.style as keyof typeof MUSIC_STYLES)
+    ? (o.style as keyof typeof MUSIC_STYLES)
+    : "energetica";
+  const s0 = store.get();
+  const len = contentDuration(s0.project) || 30;
+  store.set({ busy: `Componiendo música ${MUSIC_STYLES[style].label.toLowerCase()}…` });
+  try {
+    const m = await generateMusic(style, len + 0.3);
+    const name = `Música ${MUSIC_STYLES[style].label} (original)`;
+    const asset = await probeFile(m.file, undefined, "audio", name);
+    if (!asset) throw new Error("No se pudo crear la música.");
+    await getPlayer()?.addAsset(asset);
+    store.set((s) => ({ assets: [...s.assets, asset] }));
+    idbPut(MEDIA, asset.id, m.file).catch(() => undefined);
+    persistStorage();
+    const hasVoice = s0.project.audio.some((a) => a.kind === "voice") || s0.project.clips.some((c) => c.volume > 0.05);
+    const volume = Math.min(1.5, Math.max(0, o.volume ?? (hasVoice ? 0.18 : 0.6)));
+    const beat = 60 / m.bpm;
+    store.edit((p) => {
+      const generatedIds = new Set(s0.assets.filter((a) => a.name.endsWith("(original)")).map((a) => a.id));
+      const motions =
+        o.align === false
+          ? p.motions
+          : (p.motions ?? []).map((x) => {
+              if (x.start < 0.05) return x;
+              const nb = Math.round(x.start / beat) * beat;
+              const d = nb - x.start;
+              return Math.abs(d) <= beat / 2 && Math.abs(d) > 0.02 ? { ...x, start: nb, end: x.end + d } : x;
+            });
+      return {
+        ...p,
+        motions,
+        audio: [
+          ...p.audio.filter((a) => !(a.kind === "music" && a.assetId && generatedIds.has(a.assetId))),
+          {
+            id: uid(),
+            kind: "music" as const,
+            assetId: asset.id,
+            name,
+            start: 0,
+            duration: Math.min(m.duration, len),
+            offset: 0,
+            volume,
+            fadeIn: 0.3,
+            fadeOut: 1.5,
+            loop: false,
+          },
+        ],
+      };
+    });
+    return { style, label: MUSIC_STYLES[style].label, bpm: m.bpm, beat, volume, duration: Math.min(m.duration, len) };
+  } finally {
+    store.set({ busy: null });
+  }
 }

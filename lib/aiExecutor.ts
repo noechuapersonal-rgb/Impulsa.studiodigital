@@ -2,7 +2,7 @@
 
 import * as A from "./actions";
 import { applyBrand, chooseProjectBrand, describeBrand, findBrandByName } from "./brand";
-import { WHISPER_MODELS } from "./media";
+import { addGeneratedMusic, WHISPER_MODELS } from "./media";
 import { getPlayer } from "./player";
 import { contentDuration } from "./project";
 import { store } from "./store";
@@ -139,6 +139,10 @@ export async function executeTool(name: string, input: Input): Promise<ToolOutpu
     case "set_background": {
       const b = A.setBackground(input as Parameters<typeof A.setBackground>[0]);
       return `Fondo: ${b.style}, base ${b.base}, acento ${b.accent}.`;
+    }
+    case "add_generated_music": {
+      const r = await addGeneratedMusic(input as Parameters<typeof addGeneratedMusic>[0]);
+      return `Música original «${r.label}» agregada (${r.duration.toFixed(1)} s, ${r.bpm} BPM: un pulso cada ${r.beat.toFixed(2)} s, volumen ${r.volume}).`;
     }
     case "save_version": {
       const v = await saveVersion(typeof input.name === "string" ? input.name : undefined);

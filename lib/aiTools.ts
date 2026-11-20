@@ -307,6 +307,19 @@ Todos: start/end en segundos, position o x/y (centro, 0–1), size (1 = normal),
     },
   },
   {
+    name: "add_generated_music",
+    description:
+      "Compone MÚSICA ORIGINAL de fondo (sin derechos de autor, no hace falta que el cliente suba nada) del largo del video y la agrega abajo de todo. Estilos: energetica (electrónica con pulso, anuncios, ofertas, tecnología), corporativa (alegre y limpia: servicios, cursos, marcas), chill (lo-fi relajado: gastronomía, moda, lifestyle), emotiva (piano: historias, testimonios). Úsala en todo video armado de cero o cuando pidan música y no subieron una. Llamala AL FINAL, cuando el video ya tiene su largo definitivo. Con align (por defecto true) los elementos animados se corren al pulso más cercano.",
+    input_schema: {
+      type: "object",
+      properties: {
+        style: { type: "string", enum: ["energetica", "corporativa", "chill", "emotiva"] },
+        volume: { type: "number", description: "0–1.5. Por defecto 0.18 si hay voz, 0.6 si no." },
+        align: { type: "boolean" },
+      },
+    },
+  },
+  {
     name: "save_version",
     description:
       "Guarda lo que hay ahora en la línea de tiempo como una VERSIÓN del video (el cliente las compara abajo del visor y elige). Úsalo cuando pidan varias versiones, opciones o variantes: arma una, guárdala con un nombre corto que diga en qué se diferencia, cambia lo necesario y guarda la siguiente.",
@@ -493,7 +506,7 @@ export const SYSTEM_PROMPT = `Eres el editor de video con IA de "Impulsa Studio"
   4. Pon un elemento animado nuevo por cada frase o idea, en los segundos que devolvió la voz: titulo_animado de gancho arriba y fijo durante el bloque, tarjetas, listas, contadores, emojis, y el cierre en los últimos 3–4 s con el llamado a la acción. Nunca dejes más de 3 s sin que aparezca algo nuevo.
   5. Agrega un pop o whoosh (add_sound_effect) cuando aparece cada elemento importante, y zoom en las frases fuertes.
   6. Si subió capturas, logos o fotos, ubícalas (add_image) en las frases que las nombran; lo que no subió (por ejemplo logos de otras marcas o pantallas de una app) reemplázalo con elementos animados de texto, y al final dile en una línea qué podría subir para mejorarlo.
-  7. Si pide música y no subió ninguna, dile que puede subir una canción y se agrega de fondo.
+  7. Al final, música: si subió una canción úsala (add_music); si no, compón una con add_generated_music en el estilo que pida o que encaje (energetica para anuncios y tecnología).
   Si pide cosas que el editor no puede generar (una persona en cámara, escenas filmadas), no te frenes: haz la versión sin grabar y aclara en una línea qué cambiaste.
 - Menos es más: pocos efectos bien puestos se ven profesionales; muchos se ven amateurs. Evita filtros fuertes salvo que los pidan.
 

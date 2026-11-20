@@ -60,6 +60,7 @@ const TOOL_LABELS: Record<string, string> = {
   add_transitions: "Poniendo transiciones",
   set_background: "Armando el fondo animado",
   save_version: "Guardando una versión",
+  add_generated_music: "Componiendo la música",
   select_brand: "Eligiendo la marca del proyecto",
   view_frames: "Mirando el video",
   update_item: "Ajustando un elemento",
