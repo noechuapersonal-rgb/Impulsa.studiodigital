@@ -20,6 +20,8 @@ const MOTIONS: { type: MotionType; icon: string; hint: string; data: Record<stri
   { type: "audio", icon: "🎙️", hint: "Burbuja de audio de WhatsApp", data: { text: "Diego", value: "0:36" } },
   { type: "progreso", icon: "📊", hint: "Barra que se llena", data: { label: "Ventas del mes", to: 85 } },
   { type: "emoji", icon: "🔥", hint: "Emoji grande que salta", data: { value: "🔥" } },
+  { type: "hud_juego", icon: "🎮", hint: "Minimapa, dinero y estrellas, como dentro de un juego", data: { from: 0, to: 25000, value: "2", label: "12:45", text: "Centro" } },
+  { type: "mision", icon: "🏁", hint: "«Misión cumplida» con recompensa", data: { text: "MISIÓN CUMPLIDA", sub: "+ $5.000 · RESPETO +", label: "Ve a la barbería y pedí el corte de la casa." } },
   { type: "cierre", icon: "📣", hint: "Cartel final con botón", data: { text: "¿TE SUMÁS?", sub: "Escribinos y te contamos", label: "ESCRIBINOS" } },
 ];
 

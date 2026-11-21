@@ -286,6 +286,26 @@ export default function Inspector() {
           </div>
         )}
         {m.type === "emoji" && txt("Emoji", "value", "🔥")}
+        {m.type === "hud_juego" && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              {numF("Dinero desde", "from")}
+              {numF("Dinero hasta", "to")}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {txt("Estrellas (0–5)", "value", "2")}
+              {txt("Hora", "label", "12:45")}
+            </div>
+            {txt("Lugar (junto al mapa)", "text", "Centro")}
+          </>
+        )}
+        {m.type === "mision" && (
+          <>
+            {txt("Título", "text", "MISIÓN CUMPLIDA")}
+            {txt("Recompensa", "sub", "+ $5.000")}
+            {txt("Indicación arriba a la izquierda", "label", "Ve a la barbería", 2)}
+          </>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <Field label="Color de acento">
             <ColorField id={`motion-accent-${m.id}`} value={m.accent ?? project.brandColor ?? MOTION_DEFAULT_ACCENT} onChange={(c) => set({ accent: c })} />
