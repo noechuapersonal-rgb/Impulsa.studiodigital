@@ -20,7 +20,6 @@ export const BRAND_FONTS: { name: string; weights: string; style: string }[] = [
   { name: "DM Serif Display", weights: "400", style: "Serifa editorial" },
   { name: "Lora", weights: "400;700", style: "Serifa clásica" },
   { name: "Space Grotesk", weights: "400;700", style: "Tecnológica" },
-  { name: "Bangers", weights: "400", style: "Cómic, videojuego de acción" },
   { name: "Pacifico", weights: "400", style: "Manuscrita divertida" },
   { name: "Caveat", weights: "400;700", style: "Escrita a mano" },
 ];

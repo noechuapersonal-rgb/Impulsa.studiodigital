@@ -136,22 +136,6 @@ export const FORMATS: VideoFormat[] = [
     ],
     style: "ritmo rápido, acento fuerte (rojo, amarillo o el de la marca), pop y ding en el precio. Nunca inventes precios ni descuentos: usa los que dio el cliente o pídelos.",
   },
-  {
-    id: "mision",
-    name: "Misión de videojuego",
-    emoji: "🎮",
-    hint: "Como si estuvieras dentro de un juego: minimapa, dinero, misión cumplida",
-    when: "presentar al equipo o al dueño, el detrás de escena, un pedido o entrega contado como misión, humor de marca",
-    length: "15–30 s",
-    beats: [
-      "todo el video: elemento hud_juego de 0 al final (minimapa, vida, dinero que sube, estrellas; text con el barrio o la zona del negocio) para que parezca que se juega DENTRO del juego; efectos saturacion y contraste suaves en todo el video.",
-      "0–3 s: mision solo con label (sin text): indicación arriba a la izquierda «Ve a [el local] y [lo que hay que hacer]» + sonido ding.",
-      "3–12 s: presentaciones de personaje: en cada persona o producto (cada 2–3 s) zoom + flash + boom, efecto saturacion y vineta en ese intervalo, y un titulo grande con el NOMBRE abajo a la izquierda + etiqueta con el rol en tono de juego («EL BARBERO», «LA JEFA», «EL QUE NUNCA LLEGA TARDE»).",
-      "12–22 s: la misión: mision con text «MISIÓN: [objetivo concreto del cliente]» + lista de objetivos con ✓ que se van tildando, y un contador de dinero o puntos que sube (+$, +XP o +RESPETO; nunca inventes cifras reales del negocio, usa puntos o lo que dé el cliente).",
-      "final: mision con text «MISIÓN CUMPLIDA» y sub con la recompensa (+ RESPETO o lo que dé el cliente), sonido tada, las estrellas del hud subiendo si hay persecución + cierre con botón «[LLAMADO A LA ACCIÓN]».",
-    ],
-    style: "estilo mundo_abierto (Bangers, naranja y verde, saturado), transiciones flash, música energética. Inspirado en videojuegos de acción, sin usar logos, nombres ni personajes de juegos reales.",
-  },
 ];
 
 /** Text for the AI instructions. */

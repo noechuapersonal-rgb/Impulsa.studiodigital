@@ -178,25 +178,6 @@ export const EDIT_STYLES: EditStyle[] = [
     music: "emotiva",
     notes: "texto en mayúsculas espaciado, el rojo solo para 1 palabra clave; sumar el efecto blanco_negro al video si lo aceptan.",
   },
-  {
-    id: "mundo_abierto",
-    name: "Mundo abierto",
-    emoji: "🎮",
-    hint: "Videojuego de acción: cómic, saturado, «misión cumplida»",
-    when: "presentaciones de equipo o personaje, gaming, humor, eventos, barberías, autos, delivery, marcas con actitud",
-    titleFont: "Bangers",
-    bodyFont: "Archivo Black",
-    accent: "#ff9f1c",
-    text: "#ffffff",
-    background: { style: "degradado", base: "#1a0b26" },
-    subtitles: { preset: "tiktok", color: "#ffffff", highlight: "#7cff6b", uppercase: true, fontSize: 56 },
-    outline: "borde",
-    transitions: "flash",
-    sounds: { appear: "boom", transition: "riser", emphasis: "tada" },
-    music: "energetica",
-    notes:
-      "estética de videojuego de mundo abierto (inspirada, sin logos ni nombres de juegos reales): para que parezca DENTRO del juego poné un hud_juego de principio a fin y avisos mision; presentaciones de personaje con nombre grande + etiqueta de rol, efecto saturacion y contraste en todo el video, vineta en las presentaciones, zoom + flash al congelar la imagen, «MISIÓN» y «MISIÓN CUMPLIDA» con [caja] naranja, contadores de dinero/puntos que suben, glitch en algún corte.",
-  },
 ];
 
 export const styleById = (id: string) => EDIT_STYLES.find((s) => s.id === id);

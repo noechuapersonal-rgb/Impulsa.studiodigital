@@ -1,7 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import { formatsForPrompt } from "./formats";
-import { EDIT_STYLES, stylesForPrompt } from "./styles";
-import { MOTION_TYPES } from "./types";
+import { stylesForPrompt } from "./styles";
 
 /** Tools the AI editor can call. They are executed in the user's browser (see lib/aiExecutor.ts). */
 
@@ -267,15 +266,13 @@ export const AI_TOOLS: Anthropic.Beta.BetaTool[] = [
 - cierre: cartel final. text: frase grande ("¿TENÉS UN COMPLEJO?"), sub: aclaración, label: texto del botón ("COMENTÁ CANCHA").
 - progreso: barra que se llena. label: qué mide, to: porcentaje final.
 - emoji: un emoji grande que salta. value: el emoji.
-- hud_juego: interfaz de videojuego de mundo abierto sobre TODA la pantalla (para que parezca que estás DENTRO del juego): minimapa con ruta abajo a la izquierda, barras de vida y armadura, dinero arriba a la derecha que sube de from a to, estrellas de búsqueda. value: estrellas "0"–"5", label: hora ("12:45"), text: nombre del lugar junto al mapa ("CENTRO", el barrio del local). Ponelo de principio a fin del video (start 0, end = largo total). No uses x/y.
-- mision: aviso de misión al centro con borde negro. text: "MISIÓN CUMPLIDA" o "MISIÓN: ...", sub: recompensa ("+ $5.000 · RESPETO +"), label: indicación en caja negra arriba a la izquierda ("Ve a [lugar] y ..."); para solo la indicación, dejá text vacío.
 Todos: start/end en segundos, position o x/y (centro, 0–1), size (1 = normal), accent (color de acento hex; por defecto el de la marca), color (texto), font (tipografía; por defecto la de la marca).`,
     input_schema: {
       type: "object",
       properties: {
         type: {
           type: "string",
-          enum: [...MOTION_TYPES],
+          enum: ["titulo_animado", "contador", "lista", "tarjeta", "audio", "cierre", "progreso", "emoji"],
         },
         start: { type: "number" },
         end: { type: "number" },
@@ -317,7 +314,7 @@ Todos: start/end en segundos, position o x/y (centro, 0–1), size (1 = normal),
     input_schema: {
       type: "object",
       properties: {
-        style: { type: "string", enum: EDIT_STYLES.map((s) => s.id) },
+        style: { type: "string", enum: ["creador", "premium", "tech", "urbano", "calido", "profesional", "pop", "editorial"] },
         brand_colors: { type: "boolean" },
       },
       required: ["style"],

@@ -372,8 +372,6 @@ const MOTION_DEFAULT_LEN: Record<MotionType, number> = {
   cierre: 4,
   progreso: 3,
   emoji: 1.5,
-  hud_juego: 10,
-  mision: 3,
 };
 
 /** Default place on screen of each kind of animated element. */
@@ -386,8 +384,6 @@ const MOTION_DEFAULT_Y: Record<MotionType, number> = {
   cierre: 0.5,
   progreso: 0.45,
   emoji: 0.4,
-  hud_juego: 0.5,
-  mision: 0.42,
 };
 
 const str = (v: unknown, max = 300) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
@@ -437,7 +433,7 @@ export function addMotion(o: Record<string, unknown>): string {
     size: 1,
     // titles and closing cards use the style's (or the brand's) title typography
     font:
-      type === "titulo_animado" || type === "cierre" || type === "mision" || type === "hud_juego"
+      type === "titulo_animado" || type === "cierre"
         ? (styleById(store.get().project.styleId ?? "")?.titleFont ?? brand?.titleFont)
         : undefined,
     color:

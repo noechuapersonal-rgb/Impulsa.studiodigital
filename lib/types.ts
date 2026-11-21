@@ -187,8 +187,6 @@ export const MOTION_TYPES = [
   "cierre",
   "progreso",
   "emoji",
-  "hud_juego",
-  "mision",
 ] as const;
 export type MotionType = (typeof MOTION_TYPES)[number];
 
@@ -201,8 +199,6 @@ export const MOTION_LABELS: Record<MotionType, string> = {
   cierre: "Cartel de cierre",
   progreso: "Barra de progreso",
   emoji: "Emoji",
-  hud_juego: "HUD de videojuego",
-  mision: "Aviso de misión",
 };
 
 export interface Motion {
