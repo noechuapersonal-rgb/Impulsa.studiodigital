@@ -81,12 +81,19 @@ export function voiceInfo(): Promise<VoiceInfo> {
 /** "free" = the basic voice that runs in the browser; anything else = a natural voice id ("" = default). */
 export type VoiceChoice = string;
 
-export async function synthesizePremium(texts: string[], voice: string): Promise<Out[]> {
+/** Optional extras for dialogue: per-line context (other characters' lines) and acting directions. */
+export interface PremiumExtras {
+  contexts?: { previous?: string; next?: string }[];
+  stages?: string[];
+  expressive?: boolean;
+}
+
+export async function synthesizePremium(texts: string[], voice: string, extras: PremiumExtras = {}): Promise<Out[]> {
   store.set({ busy: "Generando la voz…" });
   const r = await fetch("/api/tts", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ texts, voice }),
+    body: JSON.stringify({ texts, voice, ...extras }),
   });
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || "No se pudo generar la voz.");

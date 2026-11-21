@@ -168,7 +168,7 @@ BANANA: Nunca vi una frutilla tan... roja.
 FRUTILLA: (se sonroja) Es mi color natural.
 
 Escena 2: La heladera, de noche
-LIMÓN: Mi hijo no se va a casar con una fruta de estación. [temblor]
+LIMÓN: (furiosa) Mi hijo no se va a casar con una fruta de estación. [temblor]
 BANANA: ¡Mamá! ¡Yo la amo! [zoom]
 LIMÓN: Sobre mi cáscara. [boom]
 
@@ -214,7 +214,7 @@ function batches(texts: string[]) {
 }
 
 async function voiceLines(
-  lines: { who: string; text: string }[],
+  lines: { who: string; text: string; stage: string }[],
   cast: Record<string, CastMember>,
   lang: VoiceLang,
 ): Promise<Float32Array[]> {
@@ -227,12 +227,26 @@ async function voiceLines(
     const v = premiumOk ? (cast[l.who]?.voice ?? "free") : "free";
     byVoice.set(v, [...(byVoice.get(v) ?? []), i]);
   });
+  // the conversation around each line (whoever says it), so the voice answers with the right intonation
+  const said = lines.map((l) => tidy(l.text));
+  const context = (i: number) => ({
+    previous: said.slice(Math.max(0, i - 2), i).join(" ") || undefined,
+    next: said.slice(i + 1, i + 3).join(" ") || undefined,
+  });
   for (const [voice, idx] of byVoice) {
     const premium = voice !== "free";
-    const texts = idx.map((i) => (premium ? tidy(lines[i].text) : speakable(lines[i].text, lang)));
+    const texts = idx.map((i) => (premium ? said[i] : speakable(lines[i].text, lang)));
     for (const part of batches(texts)) {
       const res: Out[] = premium
-        ? await synthesizePremium(part.map((k) => texts[k]), voice)
+        ? await synthesizePremium(
+            part.map((k) => texts[k]),
+            voice,
+            {
+              contexts: part.map((k) => context(idx[k])),
+              stages: part.map((k) => lines[idx[k]].stage),
+              expressive: true,
+            },
+          )
         : await synthesize(part.map((k) => texts[k]), lang);
       part.forEach((k, j) => {
         const i = idx[k];

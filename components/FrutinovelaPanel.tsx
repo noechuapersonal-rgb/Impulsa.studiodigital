@@ -125,12 +125,13 @@ export default function FrutinovelaPanel() {
     const m = fullCast[key];
     const first = parsed.beats.find((b) => b.kind === "line" && b.who === key);
     const text = first && first.kind === "line" ? first.text : "Hola, soy yo.";
+    const stage = first && first.kind === "line" ? first.stage : "";
     setTesting(key);
     setErr("");
     try {
       const premium = m.voice !== "free" && !!info?.premium;
       const lang = guessLang(text);
-      const [r] = premium ? await synthesizePremium([tidy(text)], m.voice) : await synthesize([speakable(text, lang)], lang);
+      const [r] = premium ? await synthesizePremium([tidy(text)], m.voice, { stages: [stage], expressive: true }) : await synthesize([speakable(text, lang)], lang);
       const a = trim(r.audio, r.sampling_rate);
       const url = URL.createObjectURL(toWav(a, r.sampling_rate));
       const el = new Audio(url);
