@@ -50,7 +50,7 @@ export const TAGS = ["drama", "boom", "temblor", "zoom", "flash", "pausa"] as co
 export const charKey = (name: string) =>
   name
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9ñ ]/g, "")
     .replace(/\s+/g, " ")

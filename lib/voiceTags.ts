@@ -23,7 +23,7 @@ const RULES: [RegExp, string][] = [
 const norm = (s: string) =>
   s
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
 /** "(susurrando, con malicia)" → ["whispers", "mischievously"] (at most 2, unknown directions are ignored). */
