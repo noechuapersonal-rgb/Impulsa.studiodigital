@@ -22,12 +22,14 @@ import BrandPanel from "./BrandPanel";
 import ColorField from "./ColorField";
 import Field from "./Field";
 import FontSelect from "./FontSelect";
+import FrutinovelaPanel from "./FrutinovelaPanel";
 import PublishPanel from "./PublishPanel";
 import ReferencesPanel from "./ReferencesPanel";
 import Inspector from "./Inspector";
 
 const TABS = [
   { id: "media", icon: "📁", label: "Medios" },
+  { id: "novela", icon: "🍓", label: "Novela" },
   { id: "brand", icon: "🎨", label: "Marca" },
   { id: "refs", icon: "⭐", label: "Referencias" },
   { id: "subs", icon: "🔤", label: "Subtítulos" },
@@ -74,6 +76,7 @@ export default function SidePanel({ mobile = false }: { mobile?: boolean }) {
       </nav>
       <div className={`scroll-thin min-w-0 flex-1 overflow-y-auto p-3 ${mobile ? "min-h-0 pb-6" : ""}`}>
         {tab === "media" && <MediaTab />}
+        {tab === "novela" && <FrutinovelaPanel />}
         {tab === "subs" && <SubtitlesTab />}
         {tab === "text" && <TextTab />}
         {tab === "sfx" && <SfxTab />}

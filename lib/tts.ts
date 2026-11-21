@@ -21,7 +21,7 @@ const isPhone = () => typeof navigator !== "undefined" && /Android|iPhone|iPad|i
 
 // ---------- worker ----------
 
-type Out = { audio: Float32Array; sampling_rate: number };
+export type Out = { audio: Float32Array; sampling_rate: number };
 let worker: Worker | null = null;
 let reqId = 0;
 const pending = new Map<number, { resolve: (r: Out[]) => void; reject: (e: Error) => void }>();
@@ -56,7 +56,7 @@ function getWorker(): Worker {
   return worker;
 }
 
-function synthesize(texts: string[], lang: VoiceLang): Promise<Out[]> {
+export function synthesize(texts: string[], lang: VoiceLang): Promise<Out[]> {
   const id = ++reqId;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
@@ -81,7 +81,7 @@ export function voiceInfo(): Promise<VoiceInfo> {
 /** "free" = the basic voice that runs in the browser; anything else = a natural voice id ("" = default). */
 export type VoiceChoice = string;
 
-async function synthesizePremium(texts: string[], voice: string): Promise<Out[]> {
+export async function synthesizePremium(texts: string[], voice: string): Promise<Out[]> {
   store.set({ busy: "Generando la voz…" });
   const r = await fetch("/api/tts", {
     method: "POST",
@@ -102,7 +102,7 @@ async function synthesizePremium(texts: string[], voice: string): Promise<Out[]>
 }
 
 /** Light cleanup for the natural voices (they read numbers and prices on their own). */
-const tidy = (t: string) =>
+export const tidy = (t: string) =>
   t
     .replace(/#[\p{L}\p{N}_]+/gu, " ")
     .replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}]/gu, " ")
@@ -232,7 +232,7 @@ export function guessLang(text: string): VoiceLang {
 
 // ---------- audio helpers ----------
 
-function toWav(samples: Float32Array, rate: number): File {
+export function toWav(samples: Float32Array, rate: number): File {
   const buf = new ArrayBuffer(44 + samples.length * 2);
   const v = new DataView(buf);
   const str = (o: number, s: string) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
@@ -257,7 +257,7 @@ function toWav(samples: Float32Array, rate: number): File {
 }
 
 /** Cuts leading/trailing near-silence so lines start right on time. */
-function trim(a: Float32Array, rate: number): Float32Array {
+export function trim(a: Float32Array, rate: number): Float32Array {
   const th = 0.01;
   let s = 0;
   let e = a.length;
