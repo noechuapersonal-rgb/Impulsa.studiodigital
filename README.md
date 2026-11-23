@@ -24,9 +24,6 @@ La IA ejecuta las ediciones en un editor visual donde también se puede ajustar 
 - **Efectos visuales**: zoom, temblor, glitch, flash, fundidos, blanco y negro, sepia, vintage, desenfoque, brillo,
   contraste, saturación, viñeta y barras de cine.
 - **Formatos**: 9:16 (Reels/TikTok/Shorts), 16:9, 1:1 y 4:5, con encuadre recortado, con bandas o con fondo desenfocado.
-- **Frutinovelas** (pestaña 🍓 Novela): se pega un guion (`FRUTILLA: ¡Hola!`), se sube la foto de cada fruta y se elige su
-  voz y tono; se arma solo un capítulo vertical con la foto de quien habla, su nombre, voces, subtítulos, carteles de
-  título y escena, zooms dramáticos (`[drama]`, `[boom]`, `[temblor]`…), cierre “Continuará…” y música original.
 - **Deshacer/rehacer** de cualquier cambio (también los de la IA) y **exportación** a MP4/WebM desde el navegador.
 
 Los archivos del usuario **no se suben a ningún servidor**: el render, el análisis de audio y la transcripción ocurren
@@ -65,7 +62,6 @@ el navegador lo guarda en caché.
 | Reproductor, mezcla de audio con WebAudio y exportación | `lib/player.ts` |
 | Carga de medios, detección de silencios, transcripción | `lib/media.ts`, `public/whisper-worker.js` |
 | Efectos de sonido sintetizados | `lib/sfx.ts` |
-| Frutinovelas: lectura del guion y armado del capítulo | `lib/frutinovela.ts`, `components/FrutinovelaPanel.tsx` |
 | Herramientas y prompt de la IA | `lib/aiTools.ts` |
 | Endpoint de la IA (Claude API) | `app/api/assistant/route.ts` |
 | Ejecución de las herramientas en el navegador | `lib/aiExecutor.ts`, `components/Chat.tsx` |

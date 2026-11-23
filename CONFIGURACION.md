@@ -106,8 +106,6 @@ Sin configurar nada, la voz en off usa una voz básica gratuita (suena robótica
    *Mexican* o *Latin American*) y pulsa **Add to my voices** en las que te gusten. Esas son las que verán tus clientes.
 3. En **Developers → API Keys** crea una clave y pégala en Vercel como `ELEVENLABS_API_KEY`.
    Opcional: `ELEVENLABS_VOICE_ID` con el Voice ID de la voz que quieres por defecto.
-   Opcional: `ELEVENLABS_EXPRESSIVE_MODEL` (por defecto `eleven_v3`), el modelo que usan las frutinovelas para actuar
-   las acotaciones del guion (susurrar, gritar, llorar…). Si tu cuenta no lo tiene, se usa el modelo normal.
 4. Redeploy.
 
 Cada voz natural gasta créditos de IA del cliente: 1 crédito cada 200 letras (un video de 40 segundos ≈ 3 créditos).
