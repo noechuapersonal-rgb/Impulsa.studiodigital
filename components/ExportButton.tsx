@@ -5,6 +5,7 @@ import { reportError } from "@/lib/reportError";
 import { exportFileName } from "@/lib/actions";
 import { getPlayer } from "@/lib/player";
 import { contentDuration } from "@/lib/project";
+import PublishPanel from "./PublishPanel";
 import { store, useEditor } from "@/lib/store";
 
 type Result = { url: string; name: string; file: File };
@@ -156,6 +157,12 @@ export default function ExportButton({ disabled }: { disabled: boolean }) {
                     </p>
                   )}
                   {note && <p className="mt-2 text-xs text-red-300">{note}</p>}
+                  <details className="mt-4 rounded-xl border border-[var(--line)] p-3">
+                    <summary className="cursor-pointer text-sm font-semibold">✍️ Escribime el texto para publicarlo</summary>
+                    <div className="mt-3">
+                      <PublishPanel />
+                    </div>
+                  </details>
                 </>
               )
             )}

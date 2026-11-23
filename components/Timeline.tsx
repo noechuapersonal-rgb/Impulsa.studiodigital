@@ -217,7 +217,7 @@ export default function Timeline({ mobile = false }: { mobile?: boolean }) {
               ))}
             </div>
           </div>
-          {rows.map((row) => (
+          {rows.filter((row, i) => i === 0 || row.items.length > 0).map((row) => (
             <div key={row.title} className="flex h-9 border-b border-[#1c1c29]">
               <div
                 style={{ width: LABEL_W }}

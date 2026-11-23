@@ -30,17 +30,16 @@ interface UiItem {
   fb?: { instruction: string; reply: string; actions: string[] };
 }
 
-const SUGGESTIONS = [
-  "Hazlo vertical para TikTok y pon subtítulos estilo TikTok",
-  "Quita los silencios y las pausas largas",
-  "Añade un título llamativo en los primeros 3 segundos",
-  "Pon zoom y un whoosh en los momentos más importantes",
-  "Agrega la música de fondo bajita con fundido al final",
-  "Haz un clip de 30 segundos con lo mejor",
-  "Pon mi marca y un cartel con mi WhatsApp al final",
-  "Escribime el texto para publicarlo en Instagram",
-  "Armame 3 versiones con distinto gancho para elegir",
-];
+/** 3 suggestions that fit the moment, instead of a long fixed list. */
+function suggestionsFor(p: { clips: number; cues: number; content: boolean; versions: number }): string[] {
+  if (!p.content) return ["Armame un anuncio para mi negocio", "Armame un Reel con 3 tips de mi rubro", "Armame un video de oferta"];
+  const out: string[] = [];
+  if (p.clips && !p.cues) out.push("Poné subtítulos con onda");
+  out.push(p.versions ? "Hacé otra versión con otro estilo" : "Armame 3 versiones distintas para elegir");
+  out.push("Hacelo más corto y dinámico");
+  out.push("Escribime el texto para publicarlo");
+  return out.slice(0, 3);
+}
 
 const TOOL_LABELS: Record<string, string> = {
   get_transcript: "Leyendo lo que se dice en el video",
@@ -90,7 +89,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
   const [items, setItems] = useState<UiItem[]>([
     {
       role: "assistant",
-      text: "¡Hola! Soy tu editor con IA. Sube tus videos y dime qué quieres: subtítulos, cortes, fotos, música, sonidos o efectos. Yo me encargo.",
+      text: "¡Hola! Soy tu editor con IA. Pedime lo que quieras: armar un video, cambiar el gancho, los textos, la música o los colores, hacerlo más corto, sacar otra versión… Yo me encargo.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -100,6 +99,15 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
   const endRef = useRef<HTMLDivElement>(null);
   const hasVideo = useEditor((s) => s.project.clips.length > 0 || s.assets.length > 0);
   const busyMsg = useEditor((s) => s.busy);
+  const sugKey = useEditor(
+    (s) =>
+      `${s.project.clips.length}|${s.project.cues.length}|${contentDuration(s.project) > 0 ? 1 : 0}|${s.versions.length}`,
+  );
+  const suggestions = (() => {
+    const [clips, cues, content, versions] = sugKey.split("|").map(Number);
+    return suggestionsFor({ clips, cues, content: content === 1, versions });
+  })();
+  const [optionsOpen, setOptionsOpen] = useState(false);
   // references attached in the chat (a video and/or photos): sent once with the next instruction,
   // and again if the conversation is restarted to keep requests small
   const [atts, setAtts] = useState<Attachment[]>([]);
@@ -165,7 +173,26 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
     return () => window.removeEventListener("impulsa-chat-prefill", on);
   }, []);
 
-  async function send(raw: string) {
+  // other parts of the app send messages: the start screen (with format and style) and the references
+  const sendRef = useRef<(t: string, o?: { format?: string; style?: string }) => void>(() => undefined);
+  sendRef.current = (t, o) => void send(t, o);
+  useEffect(() => {
+    const onText = (e: Event) => sendRef.current((e as CustomEvent<string>).detail);
+    const onSend = (e: Event) => {
+      const d = (e as CustomEvent<{ text: string; format?: string; style?: string }>).detail;
+      sendRef.current(d.text, { format: d.format, style: d.style });
+    };
+    window.addEventListener("impulsa-chat", onText);
+    window.addEventListener("impulsa-chat-send", onSend);
+    return () => {
+      window.removeEventListener("impulsa-chat", onText);
+      window.removeEventListener("impulsa-chat-send", onSend);
+    };
+  }, []);
+
+  async function send(raw: string, opts: { format?: string; style?: string } = {}) {
+    const fmtId = opts.format || format;
+    const stId = opts.style || styleId;
     const pending = attsRef.current.filter((x) => !x.sent);
     const text =
       raw.trim() ||
@@ -180,8 +207,8 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
     // more capable "director" model; quick tweaks stay on the fast one
     const director =
       pending.length > 0 ||
-      !!format ||
-      !!styleId ||
+      !!fmtId ||
+      !!stId ||
       DIRECTOR_RE.test(text) ||
       (contentDuration(store.get().project) <= 0 && text.length > 25);
     setInput("");
@@ -246,12 +273,12 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
       }
       sentNow.push(...toSend.map((x) => x.id));
       if (sentNow.length) updateAtts((x) => x.map((y) => (sentNow.includes(y.id) ? { ...y, sent: true } : y)));
-      const chosenStyle = styleId ? styleById(styleId) : undefined;
+      const chosenStyle = stId ? styleById(stId) : undefined;
       if (chosenStyle) {
         content.push({ type: "text", text: `<estilo_elegido>${chosenStyle.name} (id: ${chosenStyle.id})</estilo_elegido>` });
         setStyleId("");
       }
-      const chosen = format ? formatById(format) : undefined;
+      const chosen = fmtId ? formatById(fmtId) : undefined;
       if (chosen) {
         content.push({ type: "text", text: `<formato_elegido>${chosen.name} (id: ${chosen.id})</formato_elegido>` });
         setFormat("");
@@ -378,9 +405,9 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         )}
         <div ref={endRef} />
       </div>
-      {hasVideo && items.length < 3 && (
+      {items.length < 3 && (
         <div className="scroll-thin flex shrink-0 gap-1.5 overflow-x-auto px-3 pb-2 md:flex-wrap md:overflow-visible">
-          {SUGGESTIONS.map((s) => (
+          {suggestions.map((s) => (
             <button
               key={s}
               className="shrink-0 rounded-full border border-[var(--line)] px-2.5 py-1 text-left text-[11px] whitespace-nowrap text-[var(--muted)] hover:border-[var(--accent)] hover:text-white md:shrink md:whitespace-normal"
@@ -498,7 +525,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
             ))}
           </div>
         )}
-        <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+        <div className={`mb-1.5 flex-wrap items-center gap-1.5 ${optionsOpen || format || styleId ? "flex" : "hidden"}`}>
           <button
             type="button"
             className={`rounded-full border px-2.5 py-1 text-[11px] ${format ? "border-[var(--accent)] text-white" : "border-[var(--line)] text-[var(--muted)] hover:text-white"}`}
@@ -551,6 +578,14 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
               }}
             />
           </label>
+          <button
+            type="button"
+            className={`btn h-[44px] px-2.5 ${optionsOpen || format || styleId ? "!border-[var(--accent)]" : ""}`}
+            title="Elegir formato y estilo del video"
+            onClick={() => setOptionsOpen((v) => !v)}
+          >
+            ⚙️
+          </button>
           <textarea
             ref={inputRef}
             className="input min-h-[44px] resize-none"

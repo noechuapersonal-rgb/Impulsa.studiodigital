@@ -17,6 +17,7 @@ import HelpButton from "./HelpButton";
 import MissingFiles from "./MissingFiles";
 import Toast from "./Toast";
 import Preview from "./Preview";
+import StartScreen from "./StartScreen";
 import SidePanel from "./SidePanel";
 import Timeline from "./Timeline";
 import TrialWelcome from "./TrialWelcome";
@@ -60,6 +61,26 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
   const saveState = useEditor((s) => s.saveState);
   const opened = useRef(false);
   const hasContent = useEditor((s) => s.assets.length > 0 || contentDuration(s.project) > 0);
+  const started = useEditor((s) => s.started);
+  const mode = useEditor((s) => s.mode);
+  const advanced = mode === "avanzado";
+
+  // simple / hand-editing mode is remembered on this device
+  useEffect(() => {
+    try {
+      if (localStorage.getItem("impulsa-mode") === "avanzado") store.set({ mode: "avanzado" });
+    } catch {
+      /* storage blocked */
+    }
+  }, []);
+  useEffect(() => {
+    try {
+      localStorage.setItem("impulsa-mode", mode);
+    } catch {
+      /* storage blocked */
+    }
+  }, [mode]);
+  const toggleMode = () => store.set({ mode: advanced ? "simple" : "avanzado", started: true });
   const saveLabel =
     saveState === "saving"
       ? "Guardando…"
@@ -238,12 +259,18 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
           <span className="px-1 text-[10px] text-[var(--muted)]">{saveLabel}</span>
         </div>
         <div className="mx-1 hidden h-6 w-px bg-[var(--line)] md:block" />
-        <button className="btn !px-2.5 md:!px-3" disabled={!canUndo} onClick={() => store.undo()} title="Deshacer (Ctrl+Z)">
-          ↶
-        </button>
-        <button className="btn !px-2.5 md:!px-3" disabled={!canRedo} onClick={() => store.redo()} title="Rehacer (Ctrl+Shift+Z)">
-          ↷
-        </button>
+        {started && (
+          <>
+            <button className="btn !px-2.5 md:!px-3" disabled={!canUndo} onClick={() => store.undo()} title="Deshacer (Ctrl+Z)">
+              ↶
+            </button>
+            <button className="btn !px-2.5 md:!px-3" disabled={!canRedo} onClick={() => store.redo()} title="Rehacer (Ctrl+Shift+Z)">
+              ↷
+            </button>
+          </>
+        )}
+        {advanced && started && (
+        <>
         <select
           className="input !w-auto max-w-[96px] md:max-w-none"
           value={aspect}
@@ -265,6 +292,17 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
           <option value="cover">Llenar (recortar)</option>
           <option value="contain">Ajustar (bandas)</option>
         </select>
+        </>
+        )}
+        {started && (
+          <button
+            className={`btn !px-2.5 md:!px-3 ${advanced ? "" : "!border-[var(--accent)]/50"}`}
+            onClick={toggleMode}
+            title={advanced ? "Volver a la vista simple: video y asistente" : "Mostrar las herramientas para editar a mano"}
+          >
+            {advanced ? "✨" : "✏️"} <span className="hidden sm:inline">{advanced ? "Vista simple" : "Editar a mano"}</span>
+          </button>
+        )}
         <div className="flex-1" />
         {busy && (
           <div className="hidden items-center gap-2 truncate text-xs text-[var(--muted)] md:flex">
@@ -272,10 +310,10 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
             <span className="truncate">{busy}</span>
           </div>
         )}
-        <button className="btn !hidden md:!inline-flex" onClick={() => setChatOpen((v) => !v)}>
+        <button className={`btn !hidden ${advanced && started ? "md:!inline-flex" : ""}`} onClick={() => setChatOpen((v) => !v)}>
           ✨ <span className="hidden md:inline">Asistente IA</span>
         </button>
-        <ExportButton disabled={!hasAssets} />
+        {started && <ExportButton disabled={!hasAssets} />}
         {account?.trialDaysLeft != null && (
           <button
             className="btn !border-amber-500/40 text-amber-200"
@@ -318,47 +356,57 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
 
       <MissingFiles />
 
-      {isMobile ? (
+      {!started ? (
+        <>
+          <StartScreen />
+          {/* the assistant stays mounted (hidden) so the start screen can hand it the request */}
+          <div className="hidden">
+            <Chat usage={account ? { used: account.used, limit: account.limit } : undefined} />
+          </div>
+        </>
+      ) : isMobile ? (
         <>
           <div className="flex min-h-0 flex-[1_1_42%] flex-col">
-            <Preview />
+            <Preview simple={!advanced} />
           </div>
           <div className={`min-h-0 flex-[1_1_58%] border-t border-[var(--line)] ${picking ? "pointer-events-none opacity-40" : ""}`}>
             {/* the chat stays mounted so the conversation is kept when switching tabs */}
-            <div className={mTab === "ia" ? "flex h-full" : "hidden"}>
+            <div className={!advanced || mTab === "ia" ? "flex h-full" : "hidden"}>
               <Chat usage={account ? { used: account.used, limit: account.limit } : undefined} />
             </div>
-            {mTab === "tools" && <SidePanel mobile />}
-            {mTab === "timeline" && <Timeline mobile />}
+            {advanced && mTab === "tools" && <SidePanel mobile />}
+            {advanced && mTab === "timeline" && <Timeline mobile />}
           </div>
-          <nav className="grid shrink-0 grid-cols-3 border-t border-[var(--line)] bg-[var(--panel)] pb-[env(safe-area-inset-bottom)]">
-            {(
-              [
-                ["ia", "✨", "IA"],
-                ["tools", "🧰", "Editar"],
-                ["timeline", "🎞", "Línea de tiempo"],
-              ] as const
-            ).map(([id, icon, label]) => (
-              <button
-                key={id}
-                onClick={() => setMTab(id)}
-                className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${mTab === id ? "text-white" : "text-[var(--muted)]"}`}
-              >
-                <span className={`text-lg ${mTab === id ? "" : "opacity-70"}`}>{icon}</span>
-                {label}
-              </button>
-            ))}
-          </nav>
+          {advanced && (
+            <nav className="grid shrink-0 grid-cols-3 border-t border-[var(--line)] bg-[var(--panel)] pb-[env(safe-area-inset-bottom)]">
+              {(
+                [
+                  ["ia", "✨", "IA"],
+                  ["tools", "🧰", "Herramientas"],
+                  ["timeline", "🎞", "Línea de tiempo"],
+                ] as const
+              ).map(([id, icon, label]) => (
+                <button
+                  key={id}
+                  onClick={() => setMTab(id)}
+                  className={`flex flex-col items-center gap-0.5 py-2 text-[11px] font-semibold ${mTab === id ? "text-white" : "text-[var(--muted)]"}`}
+                >
+                  <span className={`text-lg ${mTab === id ? "" : "opacity-70"}`}>{icon}</span>
+                  {label}
+                </button>
+              ))}
+            </nav>
+          )}
         </>
       ) : (
         <div className="flex min-h-0 flex-1">
-          <SidePanel />
+          {advanced && <SidePanel />}
           <main className="flex min-w-0 flex-1 flex-col">
-            <Preview />
-            <Timeline />
+            <Preview simple={!advanced} />
+            {advanced && <Timeline />}
           </main>
           {/* kept mounted when hidden so other panels can still send it messages */}
-          <div className={chatOpen ? "contents" : "hidden"}>
+          <div className={chatOpen || !advanced ? "contents" : "hidden"}>
             <Chat usage={account ? { used: account.used, limit: account.limit } : undefined} />
           </div>
         </div>

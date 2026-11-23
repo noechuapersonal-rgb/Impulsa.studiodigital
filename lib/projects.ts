@@ -203,6 +203,7 @@ export async function openProject(id: string): Promise<boolean> {
       transcripts: rec.data.transcripts ?? {},
       activeRefs: rec.data.activeRefs ?? [],
       versions: rec.data.versions ?? [],
+      started: true,
       activeVersion: rec.data.activeVersion ?? null,
       selection: null,
       past: [],

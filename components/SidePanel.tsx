@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { reportError } from "@/lib/reportError";
 import * as A from "@/lib/actions";
-import { addFiles, addVideoSound, assetUses, removeAsset, WHISPER_MODELS } from "@/lib/media";
+import { addFiles, addGeneratedMusic, addVideoSound, assetUses, removeAsset, WHISPER_MODELS } from "@/lib/media";
+import { MUSIC_STYLES, type MusicStyle } from "@/lib/music";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
 import { SFX_INFO, sfxBuffer } from "@/lib/sfx";
 import { applyEditStyle } from "@/lib/applyStyle";
@@ -23,29 +24,22 @@ import BrandPanel from "./BrandPanel";
 import ColorField from "./ColorField";
 import Field from "./Field";
 import FontSelect from "./FontSelect";
-import PublishPanel from "./PublishPanel";
 import ReferencesPanel from "./ReferencesPanel";
 import Inspector from "./Inspector";
 
 const TABS = [
   { id: "media", icon: "📁", label: "Medios" },
   { id: "brand", icon: "🎨", label: "Marca" },
-  { id: "refs", icon: "⭐", label: "Referencias" },
-  { id: "subs", icon: "🔤", label: "Subtítulos" },
-  { id: "text", icon: "T", label: "Texto" },
-  { id: "sfx", icon: "🔊", label: "Sonidos" },
-  { id: "fx", icon: "✨", label: "Efectos" },
-  { id: "publish", icon: "✍️", label: "Publicar" },
-  { id: "props", icon: "⚙", label: "Propiedades" },
+  { id: "textos", icon: "🔤", label: "Textos" },
+  { id: "audio", icon: "🎵", label: "Audio" },
+  { id: "efectos", icon: "✨", label: "Efectos" },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
 export default function SidePanel({ mobile = false }: { mobile?: boolean }) {
   const [tab, setTab] = useState<Tab>("media");
+  // tapping an element opens its properties in place of the tab
   const selection = useEditor((s) => s.selection);
-  useEffect(() => {
-    if (selection) setTab("props");
-  }, [selection]);
 
   return (
     <aside
@@ -65,8 +59,11 @@ export default function SidePanel({ mobile = false }: { mobile?: boolean }) {
         {TABS.map((t) => (
           <button
             key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`flex shrink-0 flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-semibold ${mobile ? "min-w-[68px] px-1" : ""} ${tab === t.id ? "bg-[var(--panel-2)] text-white" : "text-[var(--muted)] hover:text-white"}`}
+            onClick={() => {
+              setTab(t.id);
+              store.set({ selection: null });
+            }}
+            className={`flex shrink-0 flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-semibold ${mobile ? "min-w-[68px] flex-1 px-1" : ""} ${tab === t.id && !selection ? "bg-[var(--panel-2)] text-white" : "text-[var(--muted)] hover:text-white"}`}
           >
             <span className="text-base">{t.icon}</span>
             {t.label}
@@ -74,17 +71,144 @@ export default function SidePanel({ mobile = false }: { mobile?: boolean }) {
         ))}
       </nav>
       <div className={`scroll-thin min-w-0 flex-1 overflow-y-auto p-3 ${mobile ? "min-h-0 pb-6" : ""}`}>
-        {tab === "media" && <MediaTab />}
-        {tab === "subs" && <SubtitlesTab />}
-        {tab === "text" && <TextTab />}
-        {tab === "sfx" && <SfxTab />}
-        {tab === "fx" && <FxTab />}
-        {tab === "brand" && <BrandPanel />}
-        {tab === "refs" && <ReferencesPanel />}
-        {tab === "publish" && <PublishPanel />}
-        {tab === "props" && <Inspector />}
+        {selection ? (
+          <div className="space-y-2">
+            <button className="text-xs text-[var(--muted)] hover:text-white" onClick={() => store.set({ selection: null })}>
+              ← Volver
+            </button>
+            <Inspector />
+          </div>
+        ) : (
+          <>
+            {tab === "media" && <MediaTab />}
+            {tab === "brand" && (
+              <div className="space-y-5">
+                <BrandPanel />
+                <Collapsible title="⭐ Referencias de estilo guardadas">
+                  <ReferencesPanel />
+                </Collapsible>
+              </div>
+            )}
+            {tab === "textos" && (
+              <div className="space-y-5">
+                <Collapsible title="T Agregar un texto">
+                  <TextTab />
+                </Collapsible>
+                <SubtitlesTab />
+              </div>
+            )}
+            {tab === "audio" && (
+              <div className="space-y-5">
+                <MusicSection />
+                <VoiceSection />
+                <Collapsible title="🔊 Efectos de sonido">
+                  <SfxTab />
+                </Collapsible>
+              </div>
+            )}
+            {tab === "efectos" && (
+              <div className="space-y-5">
+                <TransitionsSection />
+                <FxTab />
+              </div>
+            )}
+          </>
+        )}
       </div>
     </aside>
+  );
+}
+
+function Collapsible({ title, children, defaultOpen = false }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-xl border border-[var(--line)]">
+      <button className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-semibold" onClick={() => setOpen((v) => !v)}>
+        {title}
+        <span className="text-[var(--muted)]">{open ? "▴" : "▾"}</span>
+      </button>
+      {open && <div className="border-t border-[var(--line)] p-3">{children}</div>}
+    </div>
+  );
+}
+
+/** Original background music (or the user's own song). */
+function MusicSection() {
+  const busy = useEditor((s) => s.busy);
+  return (
+    <div className="space-y-2">
+      <div className="label">🎵 Música de fondo</div>
+      <p className="text-[11px] text-[var(--muted)]">Original y sin derechos de autor, del largo de tu video.</p>
+      <div className="grid grid-cols-2 gap-1.5">
+        {(Object.keys(MUSIC_STYLES) as MusicStyle[]).map((k) => (
+          <button
+            key={k}
+            className="btn justify-center text-xs"
+            disabled={!!busy}
+            title={MUSIC_STYLES[k].hint}
+            onClick={async () => {
+              try {
+                const r = await addGeneratedMusic({ style: k });
+                store.set({ toast: `Listo: música ${r.label.toLowerCase()} original agregada. Dale play para escucharla.` });
+              } catch (e) {
+                reportError("música generada", e);
+                store.set({ toast: (e as Error).message });
+              }
+            }}
+          >
+            {MUSIC_STYLES[k].label}
+          </button>
+        ))}
+      </div>
+      <label className="btn w-full cursor-pointer justify-center text-xs">
+        📁 Subir mi canción
+        <input
+          type="file"
+          accept="audio/*"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.length) addFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+      </label>
+    </div>
+  );
+}
+
+/** Transitions at every cut between clips. */
+function TransitionsSection() {
+  const clips = useEditor((s) => s.project.clips.length);
+  return (
+    <div className="space-y-2">
+      <div className="label">🔀 Transiciones entre clips</div>
+      {clips < 2 ? (
+        <p className="text-[11px] text-[var(--muted)]">Se usan cuando el video tiene 2 clips o más.</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-1.5">
+          {(
+            [
+              ["mixto", "Mixtas"],
+              ["zoom", "Zoom"],
+              ["barrido", "Barrido"],
+              ["flash", "Flash"],
+            ] as const
+          ).map(([style, label]) => (
+            <button
+              key={style}
+              className="btn justify-center text-xs"
+              onClick={() => {
+                const n = A.addTransitions({ style });
+                store.set({ toast: `Transiciones en ${n} cortes, con whoosh. Podés deshacerlo con ↶.` });
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="label pt-2">✨ Efectos</div>
+    </div>
   );
 }
 
@@ -322,8 +446,6 @@ function SubtitlesTab() {
         </p>
         {err && <p className="text-xs text-red-400">{err}</p>}
       </div>
-
-      <VoiceSection />
 
       <EditStylesGrid />
 

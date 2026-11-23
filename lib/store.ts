@@ -20,6 +20,10 @@ export interface EditorState {
   refs: StyleRef[];
   /** ids of the style references chosen for the current video */
   activeRefs: string[];
+  /** the start screen ("¿Qué video querés crear?") was left: creating, editing by hand or opening a project */
+  started: boolean;
+  /** simple = video + chat; avanzado = all the manual tools and the timeline */
+  mode: "simple" | "avanzado";
   /** saved variants of this video and the one being edited */
   versions: ProjectVersion[];
   activeVersion: string | null;
@@ -51,6 +55,8 @@ let state: EditorState = {
   activeRefs: [],
   versions: [],
   activeVersion: null,
+  started: false,
+  mode: "simple",
   eyedropper: null,
   projectId: null,
   projectName: "Proyecto sin título",

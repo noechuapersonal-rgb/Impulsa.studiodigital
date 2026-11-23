@@ -23,7 +23,7 @@ function startWithoutFootage() {
   );
 }
 
-export default function Preview() {
+export default function Preview({ simple = false }: { simple?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const time = useEditor((s) => s.time);
@@ -286,8 +286,8 @@ export default function Preview() {
         <button className="btn btn-primary w-12 justify-center" onClick={() => getPlayer()?.toggle()} title="Reproducir (Espacio)">
           {playing ? "❚❚" : "▶"}
         </button>
-        <AddMenu />
-        <VoiceRecorder />
+        {!simple && <AddMenu />}
+        {!simple && <VoiceRecorder />}
         <span className="font-mono text-xs whitespace-nowrap tabular-nums sm:text-sm">
           {fmt(time)} <span className="text-[var(--muted)]">/ {fmt(duration)}</span>
         </span>
