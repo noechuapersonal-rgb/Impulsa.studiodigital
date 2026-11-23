@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { reportError } from "@/lib/reportError";
 import { describeProject, transcriptForAI } from "@/lib/actions";
 import { describeBrand } from "@/lib/brand";
 import { transcribeTimeline } from "@/lib/media";
@@ -49,6 +50,7 @@ export default function PublishPanel() {
       if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
       setText(data.text);
     } catch (e) {
+      reportError("texto para publicar", e);
       setError((e as Error).message);
     } finally {
       setBusy(false);

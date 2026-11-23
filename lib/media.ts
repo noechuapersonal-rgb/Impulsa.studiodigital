@@ -1,6 +1,7 @@
 "use client";
 
 import { idbDelete, idbPut, MEDIA, persistStorage } from "./idb";
+import { reportError } from "./reportError";
 import { getPlayer } from "./player";
 import { contentDuration, fmt, nextPhotoSlot, totalDuration, uid } from "./project";
 import { store } from "./store";
@@ -311,6 +312,7 @@ export async function addFiles(files: FileList | File[], opts: { autoPlace?: boo
         placed.push(`♪ ${a.name}: de fondo desde ${fmt(start)}`);
       }
     } catch (e) {
+      reportError("archivos", e);
       store.set({ toast: (e as Error).message });
     } finally {
       store.set({ busy: null });
@@ -379,6 +381,7 @@ export async function addVideoSound(file: File, opts: { replace: boolean }) {
         : `Listo: «${a.name}» suena de fondo junto con el sonido de tu video.`,
     });
   } catch (e) {
+      reportError("archivos", e);
     store.set({ toast: (e as Error).message });
   } finally {
     store.set({ busy: null });

@@ -64,13 +64,17 @@ export default async function AdminPage({
   const admin = supabaseAdmin();
   let fbQuery = admin.from("ai_feedback").select("*").order("created_at", { ascending: false }).limit(100);
   if (onlyBad) fbQuery = fbQuery.eq("rating", -1);
-  const [{ data: list }, { data: subs }, { data: usage }, rules, { data: feedback, error: fbError }] = await Promise.all([
-    admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-    admin.from("subscriptions").select("*"),
-    admin.from("ai_usage").select("user_id, count").eq("period", currentPeriod()),
-    getAiRules(),
-    fbQuery,
-  ]);
+  const [{ data: list }, { data: subs }, { data: usage }, rules, { data: feedback, error: fbError }, checks, { data: errors }] =
+    await Promise.all([
+      admin.auth.admin.listUsers({ page: 1, perPage: 1000 }),
+      admin.from("subscriptions").select("*"),
+      admin.from("ai_usage").select("user_id, count").eq("period", currentPeriod()),
+      getAiRules(),
+      fbQuery,
+      setupChecks(),
+      admin.from("client_errors").select("*").order("created_at", { ascending: false }).limit(60),
+    ]);
+  const pending = checks.filter((c) => c.state === "falta").length;
   const good = (feedback ?? []).filter((f) => f.rating === 1).length;
   const bad = (feedback ?? []).filter((f) => f.rating === -1).length;
   const subBy = new Map((subs ?? []).map((s) => [s.user_id as string, s]));
@@ -96,13 +100,27 @@ export default async function AdminPage({
         </div>
       </header>
 
+      <nav className="mb-5 flex flex-wrap gap-2 text-xs">
+        {[
+          ["#estado", pending ? `⚙️ Estado (${pending} pendiente${pending > 1 ? "s" : ""})` : "⚙️ Estado ✅"],
+          ["#usuarios", "👥 Usuarios"],
+          ["#reglas", "🧠 Reglas de la IA"],
+          ["#opiniones", "💬 Opiniones"],
+          ["#errores", `🐞 Errores${errors?.length ? ` (${errors.length})` : ""}`],
+        ].map(([href, label]) => (
+          <a key={href} href={href} className={`btn !py-1 ${href === "#estado" && pending ? "!border-amber-400/60" : ""}`}>
+            {label}
+          </a>
+        ))}
+      </nav>
+
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
         <Stat label="Usuarios registrados" value={String(list?.users.length ?? 0)} />
         <Stat label="Suscripciones pagando" value={String(paying)} hint={`≈ ${formatPrice(paying * config.planPrice)} / mes`} />
         <Stat label="Activados a mano" value={String(manual)} />
       </div>
 
-      <form className="mb-3 flex gap-2">
+      <form id="usuarios" className="mb-3 flex gap-2">
         <input id="q" name="q" defaultValue={q} className="input" placeholder="Buscar por mail…" />
         <button className="btn">Buscar</button>
       </form>
@@ -266,8 +284,128 @@ export default async function AdminPage({
           </>
         )}
       </section>
+
+      <section id="estado" className="mt-10">
+        <h2 className="text-xl font-bold">⚙️ Estado de la configuración</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Lo que necesita la app para funcionar y cobrar. ✅ listo · ❌ falta · ➖ opcional.
+        </p>
+        <div className="panel mt-3 divide-y divide-[var(--line)] rounded-2xl">
+          {checks.map((c) => (
+            <div key={c.name} className="flex gap-3 p-3 text-sm">
+              <span className="shrink-0">{c.state === "ok" ? "✅" : c.state === "falta" ? "❌" : "➖"}</span>
+              <div className="min-w-0">
+                <div className="font-semibold">{c.name}</div>
+                <div className="text-xs text-[var(--muted)]">{c.state === "ok" ? c.ok : c.fix}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-2 text-xs text-[var(--muted)]">
+          Las tablas que faltan se crean corriendo el archivo supabase/schema.sql en Supabase → SQL Editor (se puede correr
+          entero de nuevo sin problema). Las variables se cargan en Vercel → Settings → Environment Variables y después
+          Redeploy.
+        </p>
+      </section>
+
+      <section id="errores" className="mt-10">
+        <h2 className="text-xl font-bold">🐞 Errores recientes de los usuarios</h2>
+        <p className="mt-1 text-sm text-[var(--muted)]">
+          Lo que les falló a los usuarios en la app (exportar, la IA, archivos…). Si algo se repite, pasámelo para
+          arreglarlo.
+        </p>
+        <div className="mt-3 space-y-2">
+          {(errors ?? []).map((e) => (
+            <details key={e.id} className="panel rounded-xl p-3 text-sm">
+              <summary className="cursor-pointer">
+                <span className="text-xs text-[var(--muted)]">
+                  {new Date(e.created_at).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" })} · {e.email} ·{" "}
+                  {e.where_}
+                </span>
+                <span className="mt-1 block font-semibold">{e.message}</span>
+              </summary>
+              <pre className="mt-2 text-[11px] whitespace-pre-wrap text-[var(--muted)]">
+                {[e.detail, e.url && `Página: ${e.url}`, e.user_agent && `Navegador: ${e.user_agent}`].filter(Boolean).join("\n")}
+              </pre>
+            </details>
+          ))}
+          {!errors?.length && <p className="text-sm text-[var(--muted)]">Sin errores registrados. 🎉</p>}
+        </div>
+      </section>
     </main>
   );
+}
+
+type Check = { name: string; state: "ok" | "falta" | "opcional"; ok: string; fix: string };
+
+/** What the app needs to work and to charge, checked on the server. */
+async function setupChecks(): Promise<Check[]> {
+  const env = (k: string) => !!process.env[k]?.trim();
+  const admin = supabaseAdmin();
+  const table = async (t: string) => !(await admin.from(t).select("*", { head: true, count: "exact" }).limit(1)).error;
+  const tables = ["subscriptions", "ai_usage", "brand_kits", "projects", "app_settings", "ai_feedback", "client_errors"];
+  const present = await Promise.all(tables.map(table));
+  const missing = tables.filter((_, i) => !present[i]);
+  const c = (name: string, ok: boolean, okText: string, fix: string, optional = false): Check => ({
+    name,
+    state: ok ? "ok" : optional ? "opcional" : "falta",
+    ok: okText,
+    fix,
+  });
+  return [
+    c("IA (Claude)", env("ANTHROPIC_API_KEY") || env("ANTHROPIC_AUTH_TOKEN"), "Clave cargada.", "Falta ANTHROPIC_API_KEY en Vercel."),
+    c(
+      "Tablas de la base de datos",
+      !missing.length,
+      `Las ${tables.length} tablas existen.`,
+      `Faltan: ${missing.join(", ")}. Corré supabase/schema.sql en Supabase → SQL Editor.`,
+    ),
+    c(
+      "Cobros con Mercado Pago",
+      env("MP_ACCESS_TOKEN"),
+      "Access Token cargado.",
+      "Falta MP_ACCESS_TOKEN (Mercado Pago → Tus integraciones → Credenciales de producción). Sin esto nadie puede suscribirse.",
+    ),
+    c(
+      "Avisos de pago de Mercado Pago (webhook)",
+      env("MP_WEBHOOK_SECRET"),
+      "Clave del webhook cargada.",
+      "Falta MP_WEBHOOK_SECRET (Mercado Pago → Webhooks, URL /api/mp/webhook). Sin esto las suscripciones no se activan solas.",
+    ),
+    c(
+      "Dirección de la web",
+      env("NEXT_PUBLIC_SITE_URL"),
+      process.env.NEXT_PUBLIC_SITE_URL ?? "",
+      "Falta NEXT_PUBLIC_SITE_URL (ej. https://impulsa-studiodigital.vercel.app). Se usa en los mails y en Mercado Pago.",
+    ),
+    c("Contraseña del panel", env("ADMIN_PASSWORD"), "Configurada.", "Falta ADMIN_PASSWORD."),
+    c(
+      "Soporte (WhatsApp o mail)",
+      env("NEXT_PUBLIC_SUPPORT_WHATSAPP") || env("NEXT_PUBLIC_SUPPORT_EMAIL"),
+      "El botón «Ayuda» muestra tu contacto.",
+      "Falta NEXT_PUBLIC_SUPPORT_WHATSAPP o NEXT_PUBLIC_SUPPORT_EMAIL: los clientes no tienen a quién escribir.",
+    ),
+    c(
+      "Voces naturales (ElevenLabs)",
+      env("ELEVENLABS_API_KEY"),
+      "Conectadas.",
+      "Opcional: sin ELEVENLABS_API_KEY la voz en off es la básica (robótica).",
+      true,
+    ),
+    c(
+      "Entrar con Google",
+      process.env.NEXT_PUBLIC_GOOGLE_LOGIN === "1",
+      "Activado.",
+      "Opcional: ver CONFIGURACION.md → Entrar con Google.",
+      true,
+    ),
+    {
+      name: "Mails (código de ingreso, confirmar cuenta, recuperar contraseña)",
+      state: "opcional",
+      ok: "",
+      fix: "No se puede comprobar desde acá: revisá en Supabase → Authentication → Emails → SMTP Settings que tengas un correo propio (Resend o Brevo). El correo gratuito de Supabase manda muy pocos mails por hora.",
+    },
+  ];
 }
 
 function LockScreen({ wrong }: { wrong: boolean }) {

@@ -95,3 +95,18 @@ create table if not exists public.ai_feedback (
 );
 create index if not exists ai_feedback_created_idx on public.ai_feedback (created_at desc);
 alter table public.ai_feedback enable row level security;
+
+-- Errores que les pasan a los usuarios en la app (exportar, IA, archivos…), para verlos en /admin
+create table if not exists public.client_errors (
+  id bigint generated always as identity primary key,
+  user_id uuid references auth.users (id) on delete set null,
+  email text,
+  where_ text,
+  message text not null,
+  detail text,
+  url text,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+create index if not exists client_errors_created_idx on public.client_errors (created_at desc);
+alter table public.client_errors enable row level security;

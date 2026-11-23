@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { reportError } from "@/lib/reportError";
 import { uid } from "@/lib/project";
 import { analyzeVideo, chatSend, saveReferences } from "@/lib/references";
 import { store, useEditor } from "@/lib/store";
@@ -68,6 +69,7 @@ export default function ReferencesPanel() {
       setLink("");
       setOpen(ref.id);
     } catch (e) {
+      reportError("referencias", e);
       setError((e as Error).message);
     } finally {
       setProgress("");

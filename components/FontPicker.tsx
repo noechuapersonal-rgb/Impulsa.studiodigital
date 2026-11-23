@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { reportError } from "@/lib/reportError";
 import { BRAND_FONTS, fontFromFile, loadFont, MAX_FONT_FILES, photoForAI } from "@/lib/brand";
 import type { CustomFont } from "@/lib/types";
 import Field from "./Field";
@@ -47,6 +48,7 @@ export default function FontPicker({
       await loadFont(name, [nf]);
       onChange({ fonts: [...fonts, nf], font: name });
     } catch (e) {
+      reportError("tipografías", e);
       setError((e as Error).message);
     } finally {
       setBusy("");
@@ -84,6 +86,7 @@ export default function FontPicker({
       }
       setResult({ photos, combo });
     } catch (e) {
+      reportError("tipografías", e);
       setError((e as Error).message);
     } finally {
       setBusy("");

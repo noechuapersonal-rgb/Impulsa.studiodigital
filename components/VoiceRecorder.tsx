@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { reportError } from "@/lib/reportError";
 import { fmt } from "@/lib/project";
 import { cancelRecording, startRecording, stopRecording, type RecordOptions } from "@/lib/recorder";
 import { useEditor } from "@/lib/store";
@@ -23,6 +24,7 @@ export default function VoiceRecorder() {
     try {
       await p;
     } catch (e) {
+      reportError("grabar voz", e);
       setError((e as Error).message);
       setOpen(true);
     } finally {
@@ -43,6 +45,7 @@ export default function VoiceRecorder() {
       setSecs(0);
       setState("rec");
     } catch (e) {
+      reportError("grabar voz", e);
       setError((e as Error).message);
       setOpen(true);
       setState("idle");

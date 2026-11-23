@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { reportError } from "@/lib/reportError";
 import * as A from "@/lib/actions";
 import { addFiles, addGeneratedMusic, addVideoSound } from "@/lib/media";
 import { MUSIC_STYLES, type MusicStyle } from "@/lib/music";
@@ -210,6 +211,7 @@ export default function AddMenu() {
                         const r = await addGeneratedMusic({ style: k });
                         store.set({ toast: `Listo: música ${r.label.toLowerCase()} original agregada. Dale play para escucharla.` });
                       } catch (e) {
+      reportError("música generada", e);
                         store.set({ toast: (e as Error).message });
                       }
                     }}

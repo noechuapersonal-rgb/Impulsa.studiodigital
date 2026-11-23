@@ -5,6 +5,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { describeProject } from "@/lib/actions";
 import { executeTool, framesForAI, storyboardTimes } from "@/lib/aiExecutor";
 import { photoForAI } from "@/lib/brand";
+import { reportError } from "@/lib/reportError";
 import { FORMATS, formatById } from "@/lib/formats";
 import { EDIT_STYLES, styleById } from "@/lib/styles";
 import {
@@ -139,6 +140,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         }
       }
     } catch (e) {
+      reportError("referencia en el chat", e);
       push({ role: "error", text: (e as Error).message });
     } finally {
       setRefBusy(false);
@@ -315,6 +317,7 @@ export default function Chat({ usage: initialUsage }: { usage?: { used: number; 
         if (step === MAX_STEPS - 1) push({ role: "error", text: "Se alcanzó el límite de pasos para esta instrucción." });
       }
     } catch (e) {
+      reportError("asistente IA", e, `pedido: ${text.slice(0, 200)}`);
       // keep the conversation valid: drop this unfinished exchange
       history.current = history.current.slice(0, snapshot);
       // the references of this message were not delivered: send them again next time

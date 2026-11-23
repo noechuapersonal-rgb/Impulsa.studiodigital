@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { reportError } from "@/lib/reportError";
 import * as A from "@/lib/actions";
 import { addFiles, addVideoSound, assetUses, removeAsset, WHISPER_MODELS } from "@/lib/media";
 import { SUBTITLE_PRESETS, fmt, nextPhotoSlot } from "@/lib/project";
@@ -134,6 +135,7 @@ function MediaTab() {
                   : "No se encontraron silencios largos para quitar. Tu video ya está ajustado.",
               });
             } catch (e) {
+      reportError("panel", e);
               store.set({ toast: `No se pudieron analizar los silencios: ${(e as Error).message}` });
             }
           }}
@@ -262,6 +264,7 @@ function SubtitlesTab() {
       const n = await A.addSubtitles({ language: lang || null, model, source: src });
       if (!n) setErr("No se escuchó voz ni letra para subtitular. Probá eligiendo otro audio o el modelo «Preciso».");
     } catch (e) {
+      reportError("panel", e);
       setErr((e as Error).message);
     }
   };
@@ -535,6 +538,7 @@ function VoiceSection() {
         store.set({ toast: "Listo: voz en off agregada con sus subtítulos. Dale play para escucharla." });
       }
     } catch (e) {
+      reportError("panel", e);
       setErr((e as Error).message);
     }
   };

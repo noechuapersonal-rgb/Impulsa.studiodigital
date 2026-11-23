@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { reportError } from "@/lib/reportError";
 import { exportFileName } from "@/lib/actions";
 import { getPlayer } from "@/lib/player";
 import { contentDuration } from "@/lib/project";
@@ -52,6 +53,7 @@ export default function ExportButton({ disabled }: { disabled: boolean }) {
       const file = new File([blob], name, { type });
       setResult({ url: URL.createObjectURL(file), name, file });
     } catch (e) {
+      reportError("exportar", e);
       store.set({ toast: `No se pudo exportar: ${(e as Error).message}` });
     } finally {
       lock?.release().catch(() => undefined);
@@ -65,6 +67,7 @@ export default function ExportButton({ disabled }: { disabled: boolean }) {
     try {
       await navigator.share({ files: [result.file], title: result.name });
     } catch (e) {
+      reportError("exportar", e);
       if ((e as Error).name !== "AbortError")
         setNote("No se pudo abrir el menú para compartir. Probá con «Descargar».");
     }

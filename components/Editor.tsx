@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { deleteSelection, setFormat } from "@/lib/actions";
 import { loadFont, loadLibrary } from "@/lib/brand";
+import { installErrorReporting } from "@/lib/reportError";
 import { getPlayer } from "@/lib/player";
 import { openProject, saveCurrentProject } from "@/lib/projects";
 import { contentDuration, splitClipAt } from "@/lib/project";
@@ -145,6 +146,8 @@ export default function Editor({ account, projectId }: { account?: EditorAccount
       window.removeEventListener("impulsa-chat-prefill", open);
     };
   }, []);
+
+  useEffect(() => installErrorReporting(), []);
 
   useEffect(() => {
     loadLibrary().then((lib) => store.set({ brands: lib.brands, refs: lib.references }));
